@@ -8,6 +8,7 @@ from molgenbench.io.reader import read_sdf_to_records, attach_docked_molecules
 from molgenbench.metrics.basic import ValidMetric, QEDMetric, SAMetric, ChemFilterMetric
 from molgenbench.metrics.conformer import PoseBusterMetric, StrainEnergyMetrics, RMSDMetric, InteractionScoreMetric, ClashScoreMetric
 from molgenbench.metrics.distribution import DiversityMetric, UniquenessMetric, MotifDistMetric
+from molgenbench.metrics.hitrate import HitRediscoverMetric
 
 
 class Evaluator:
@@ -18,7 +19,7 @@ class Evaluator:
     """
 
     def __init__(self, metric_names: List[str] = None):
-        self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "PoseBuster", "StrainEnergy", "RMSD"]
+        self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "PoseBuster", "StrainEnergy", "RMSD", "HitRediscover"]
         self.metric_map = {
             "Validity": ValidMetric(),
             "QED": QEDMetric(),
@@ -34,6 +35,8 @@ class Evaluator:
             "ClashScore": ClashScoreMetric(),
             
             "MotifDist": MotifDistMetric(),
+            
+            "HitRediscover": HitRediscoverMetric(),
         }
 
         # 按类型分类 metric（单分子级 vs 数据集级）
@@ -50,6 +53,7 @@ class Evaluator:
                 "ClashScore",
                 "InteractionScore",
                 "ChemFilter",
+                "HitRediscover"
                 
             ]
         ]

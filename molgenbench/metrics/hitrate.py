@@ -43,7 +43,7 @@ class HitRediscoverMetric(Metric):
             scaffold_smiles = Chem.MolToSmiles(scaffold)
             return scaffold_smiles
         except:
-            return 'None'
+            return ''
 
     def _fix_stereo_from_3D(self, mol: Chem.Mol) -> Chem.Mol:
         Chem.RemoveStereochemistry(mol)
@@ -52,7 +52,7 @@ class HitRediscoverMetric(Metric):
     
     def _load_reference_maps(self, ref_active_path: str): 
         cached_smiles_path = ref_active_path.replace('_reference_active_molecules.sdf', '_smiles.pkl')
-        cached_scaffold_path = ref_active_path.replace('_reference_active_molecules.sdf', '_scaffolds.pkl')
+        cached_scaffold_path = ref_active_path.replace('_reference_active_molecules.sdf', '_scaffold.pkl')
         
         # load or create cached reference smiles map
         if not os.path.exists(cached_smiles_path):
@@ -92,7 +92,7 @@ class HitRediscoverMetric(Metric):
             
             for ref_smiles in ref_smiles_set:
                 scaffold_smiles = self._getScaffold(ref_smiles)
-                if scaffold_smiles != 'None':
+                if scaffold_smiles != '':
                     ref_scaffold_set.add(scaffold_smiles)
             
             for ref_scaffold in ref_scaffold_set:
@@ -115,7 +115,7 @@ class HitRediscoverMetric(Metric):
         store the hit info under `record.metadata[self.name]`.
         """
         result = {
-            "gem_smiles": None,
+            "gen_smiles": None,
             "gen_scaffold": None,
             "smiles_hit": None,
             "scaffold_hit": None,
@@ -128,7 +128,7 @@ class HitRediscoverMetric(Metric):
         mol = record.rdkit_mol
         if mol is None:
             record.metadata[self.name] = result
-            return result
+            return record.metadata[self.name]
         
         frags = Chem.GetMolFrags(mol, asMols=True)
         gen_mol = max(frags, key=lambda x: x.GetNumAtoms())
@@ -139,27 +139,29 @@ class HitRediscoverMetric(Metric):
         gen_smiles = Chem.MolToSmiles(gen_mol)
         gen_smiles_inchi = Chem.MolToInchi(gen_mol)
         
-        gen_scaffold = self._getScaffold(gen_mol)
-        gen_scaffold_inchi = Chem.MolToInchi(Chem.MolFromSmiles(gen_scaffold)) if gen_scaffold != 'None' else None
+        gen_scaffold = self._getScaffold(gen_smiles)
+        gen_scaffold_inchi = Chem.MolToInchi(Chem.MolFromSmiles(gen_scaffold)) if gen_scaffold != '' else None
 
         result["gen_smiles"] = gen_smiles
-        result["gen_scaffold"] = gen_scaffold if gen_scaffold != 'None' else None
+        result["gen_scaffold"] = gen_scaffold if gen_scaffold != '' else None
 
         ref_active_path = record.metadata.get("ref_active_path", None)
         ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps(ref_active_path)
         
-        if gen_smiles_inchi in ref_inchi_map_ref_smiles:
+        if gen_smiles_inchi is not None and gen_smiles_inchi in ref_inchi_map_ref_smiles:
             result["smiles_hit"] = True
             result["found_smiles_inchi"] = gen_smiles_inchi
             result["found_smiles"] = ref_inchi_map_ref_smiles[gen_smiles_inchi]
         else:
             result["smiles_hit"] = False
-            
-        if gen_scaffold_inchi in ref_inchi_map_ref_scaffold:
+        
+        if gen_scaffold_inchi is not None and gen_scaffold_inchi in ref_inchi_map_ref_scaffold:
             result["scaffold_hit"] = True
             result["found_scaffold_inchi"] = gen_scaffold_inchi
             result["found_scaffold"] = ref_inchi_map_ref_scaffold[gen_scaffold_inchi]
         else:
             result["scaffold_hit"] = False
+            
+        record.metadata[self.name] = result
 
-        return result
+        return record.metadata[self.name]
