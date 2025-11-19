@@ -204,17 +204,15 @@ class InteractionScoreMetric(Metric):
 
     def _filterMol(self, mol: Chem.Mol) -> bool:
         """Filter atoms in a molecule based on their atomic symbol and coordinates."""
-        if not is_valid(mol):
-            return False
-
-        for atom in mol.GetAtoms():
-            if atom.GetSymbol() == "As":
-                return False
         
         if Lipinski.NumRotatableBonds(mol) >= 15:
             return False
+        
+        for atom in mol.GetAtoms():
+            if atom.GetSymbol() == "As":
+                return False
 
-        return mol.GetNumAtoms() > 0 and not np.isnan(mol.GetConformer().GetPositions()).any()
+        return True
 
     def _format_active_df(self, active_df: pd.DataFrame) -> pd.DataFrame:
         """Format the active interaction dataframe by flattening columns and removing unwanted data."""
@@ -235,11 +233,11 @@ class InteractionScoreMetric(Metric):
         df = fp.to_dataframe()
         return df
 
-    def _filter_records(self, records: List[MoleculeRecord]) -> List[MoleculeRecord]:
+    def _filter_ligands(self, ligands: List[Chem.Mol]) -> List[Chem.Mol]:
         """Return records that pass geometry and atom filters."""
         return [
-            r for r in records
-            if r.rdkit_mol is not None and self._filterMol(r.rdkit_mol)
+            lig for lig in ligands
+            if lig is not None and self._filterMol(lig)
         ]
 
     def _prepare_ligands(self, records: List[MoleculeRecord]) -> List[plf.Molecule]:
@@ -247,12 +245,17 @@ class InteractionScoreMetric(Metric):
         ligands = []
         for r in records:
             mol = r.rdkit_mol
+            if mol is None:
+                continue
             try:
                 mol_h = Chem.AddHs(mol, addCoords=True)
-                ligands.append(plf.Molecule.from_rdkit(mol_h))
+                if mol_h is None:
+                    continue
+                if len(mol_h.GetAtoms())> 0 and not np.isnan(mol_h.GetConformer().GetPositions()).any():
+                    ligands.append(plf.Molecule.from_rdkit(mol_h))
             except Exception:
                 continue
-        return [lig for lig in ligands if lig is not None]
+        return [lig for lig in ligands if lig is not None and len(lig.GetAtoms())> 0 and not np.isnan(lig.GetConformer().GetPositions()).any()]
     
     def _fp_dict_to_flat(self, fp_dict: Dict) -> Dict[str, bool]:
         """Flatten nested fingerprint dict to single-level dict."""
@@ -266,8 +269,8 @@ class InteractionScoreMetric(Metric):
     def _compute_fp_df(self, records: List[MoleculeRecord], protein_path: str) -> pd.DataFrame:
         """Compute a flattened interaction fingerprint dataframe for given records."""
         protein = Chem.MolFromPDBFile(protein_path, removeHs=False)
-        filtered_records = self._filter_records(records)
-        ligands = self._prepare_ligands(filtered_records)
+        ligands = self._prepare_ligands(records)
+        ligands = self._filter_ligands(ligands)
 
         try:
             df = self._nonBondInteractions(ligands, plf.Molecule(protein))
