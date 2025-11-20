@@ -2,7 +2,9 @@
 # MolGenBench: CodeBase for "Benchmarking Real-World Applicability of Molecular Generative Models from De novo Design to Lead Optimization with MolGenBench"
 ![MolGenBench overview](./FigShow/MolGenBench.svg "Overview of MolGenBench pipeline")
 
-**Please note that our current code only provides the computational workflow for reproducing the paper's results. A more elegantly refactored codebase will be updated as soon as possible.**
+> [!NOTE]
+> **Please note that our current code only provides the computational workflow for reproducing the paper's results. A more elegantly refactored codebase will be updated as soon as possible.**
+
 # Environment Setup
 ```bash
 conda create --name MolGenBench python=3.11
@@ -12,7 +14,7 @@ pip install tqdm joblib
 pip install pytest
 pip install swifter
 pip install medchem
-mamba install lilly-medchem-rules
+mamba install -c conda-forge lilly-medchem-rules
 mamba install openbabel
 pip install posebusters spyrmsd
 
@@ -21,16 +23,9 @@ pip install meeko==0.1.dev3 scipy pdb2pqr vina
 python -m pip install git+https://github.com/Valdes-Tresanco-MS/AutoDockTools_py3
 
 # for posecheck evaluation
-git clone https://github.com/cch1999/posecheck.git
-cd posecheck
-git checkout 57a1938  # the calculation of strain energy used in our paper
-pip install -e .
-pip install -r requirements.txt
-mamba install -c mx reduce
+pip install posecheck
 
 ```
-# BenchMark Results
-Please download from [Zenodo dataset](https://zenodo.org/records/17572553) the result on your device and unzip the files 
 
 # Test the sample and Environment Setup
 ```bash
@@ -38,14 +33,145 @@ cd ~/MolGenBench
 pytest -q molgenbench/pytest/*
 ```
 
-# Runing The Evaluation
+# BenchMark Results
+Please download from [Zenodo dataset](https://zenodo.org/records/17572553) the result on your device and unzip the files 
 
-## Denovo : compute hit rete/fraction/recovery 
-### Run the preprocess scripts
+# Required Directory Structure
 
- python molgenbench/preprocess/reference_process.py --reference_dir relative_dir/TestSamples
- python molgenbench/preprocess/hit_info_preprocess_denovo.py --generated_dir relative_dir/TestSamples
-###  And then, using notebook to show the final results:
+Before running the evaluation pipeline, please make sure that your data is organized
+according to the required folder structure. All data should follow the structure below:
+
+```
+P12345/     # Uniprot ID
+├─ reference_active_molecules/
+├─ Round1/
+│  ├─ De_novo_Results/
+│  │  └─ <YOUR_MODEL_NAME>/
+│  │     ├─ results/    # Evaluation results will be saved here
+│  │     ├─ P12345_<YOUR_MODEL_NAME>.sdf
+│  │     └─ P12345_<YOUR_MODEL_NAME>_vina_docked.sdf     # Docked pose generated using vina_docking.py
+│  │
+│  └─ Hit_to_Lead_Results/
+│     └─ Sries001/      # Series ID
+│        └─ <YOUR_MODEL_NAME>/
+│           ├─ results/ 
+│           ├─ P12345_Sries001_<YOUR_MODEL_NAME>.sdf
+│           └─ P12345_Sries001_<YOUR_MODEL_NAME>_vina_docked.sdf
+│
+├─ P12345_prep.pdb
+├─ P12345_pocket10.pdb
+└─ P12345_lig.sdf
+```
+
+# Run Generation with Your Model
+
+This section explains how to use the MolGenBench data structure to run *your own
+molecule generation model*. After molecules are generated, they can be evaluated
+with the unified MolGenBench evaluation pipeline.
+
+MolGenBench supports two generation scenarios:
+
+1. **De novo design**  
+2. **Hit-to-lead optimization**
+
+## De novo design
+**Input requirement:**
+
+- You may use either the full protein (`*_prep.pdb`) or the pocket file (`*_pocket10.pdb`) as model input; the ligand file (`*_lig.sdf`) is used to define the pocket position.
+
+**Generation rules:**
+
+- Set the generation  to **1000 samples per UniProt ID**.
+- Do **NOT** perform any filtering or post-processing beyond what your model naturally produces.  
+  → If your model produces fewer than 1000 valid molecules, keep all valid molecules it can generate.
+- Save the generated SDF file as:
+Generated molecules should be saved as `<UniprotID>_<YOUR_MODEL_NAME>.sdf`; each molecule must have its `_Name` field set to a unique index (0, 1, 2, …) to distinguish individual samples.
+
+## Hit-to-lead optimization
+
+Hit-to-lead optimization is performed **per chemical series**.  
+
+**Generation rules:**
+
+- Set the generation  to **200 samples per Series ID**.
+- Do **NOT** perform any filtering or post-processing beyond what your model naturally produces.  
+  → If your model produces fewer than 200 valid molecules, keep all valid molecules it can generate.
+- Save the generated SDF file as:
+Generated molecules should be saved as `<UniprotID>_<SeriesID>_<YOUR_MODEL_NAME>.sdf`; each molecule must have its `_Name` field set to a unique index (0, 1, 2, …) to distinguish individual samples.
+
+---
+Depending on your model type, use different inputs:
+
+### **1. Structure-based generation models**
+
+**Input requirement:**
+
+- Protein pocket: `<UniprotID>_pocket10.pdb` or `<UniprotID>_prep.pdb`
+- Reference ligand pose for the specific series:
+  `<UniprotID>_<SeriesID>_reference_ligand_pose_with_h.sdf`
+
+### **2. Ligand-based generation models**
+
+**Input requirement:**
+
+Use ONLY:
+
+- `<UniprotID>_<SeriesID>_reference_ligand_pose_with_h.sdf`
+
+
+# Running the Evaluation
+
+After generating molecules with your model, you can evaluate them using the unified
+evaluation pipeline provided in `eval.py`.
+
+```bash
+python run_eval.py \
+    --data_path "/path/to/data" \
+    --round_name "Round1" \
+    --mode "De_novo_Results" \ or "Hit_to_Lead_Results"
+    --model_name "YOUR_MODEL_NAME"
+```
+
+You can **comment out metrics in `eval.py` that you do not wish to compute.**
+For example:
+
+```python
+evaluator = Evaluator(
+    [
+        "Validity", 
+        "QED",
+        "SA",
+        "Uniqueness",
+        "Diversity",
+        "MotifDist",
+        "ChemFilter",
+        "HitRediscover",
+
+        # ----below are 3D metrics----
+        # "PoseBuster", # comment out if 3D checks are not needed
+        # "StrainEnergy",
+        # "RMSD",
+        # "InteractionScore"
+        # "ClashScore"
+        
+      ]
+)
+```
+
+> [!TIP]
+> RMSD and other 3D metrics require the `*_vina_docked.sdf` files.  
+> Please run `vina_docking.py` to generate the docked poses before evaluation.
+> You can generate them by running:
+> ```bash
+> python vina_docking.py \
+>    --data_path "/path/to/data" \
+>    --output_path "/path/to/output" \
+>    --round_name "Round1" \
+>    --mode "De_novo_Results" \ or "Hit_to_Lead_Results"
+>    --model_name "YOUR_MODEL_NAME"
+> ```
+
+#  Finally, using notebook to show the final results:
 ``` For Example:
    denovo hit rate (please replace the name of dir)
    relative_dir/FigShow/Denovo_hit_recovery/Deonovo_repeats_hit_rate_boxplot.ipynb
