@@ -33,14 +33,13 @@ cd ~/MolGenBench
 pytest -q molgenbench/pytest/*
 ```
 
-# 📦 Datasets & BenchMark Results
+# 📦 Datasets & Benchmark Results
 Please download from [Zenodo dataset](https://zenodo.org/records/17572553) the result on your device and unzip the files. The downloaded dataset already follows the required folder structure, so you can directly use it for evaluation without any reorganization.
 
 # 📁 Required Directory Structure
 
 > [!NOTE]
 > If you generate molecules with your own model, please ensure that your output is saved following the same directory structure as the official dataset.
-> 
 > Below is the expected structure for each UniProt target:
 
 ```
