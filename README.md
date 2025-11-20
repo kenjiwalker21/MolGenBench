@@ -5,7 +5,7 @@
 > [!NOTE]
 > **Please note that our current code only provides the computational workflow for reproducing the paper's results. A more elegantly refactored codebase will be updated as soon as possible.**
 
-# Environment Setup
+# 🛠️ Environment Setup
 ```bash
 conda create --name MolGenBench python=3.11
 mamba install -c conda-forge rdkit numpy pandas seaborn scipy -y
@@ -27,19 +27,21 @@ pip install posecheck
 
 ```
 
-# Test the sample and Environment Setup
+# 🧪 Test the sample and Environment Setup
 ```bash
 cd ~/MolGenBench
 pytest -q molgenbench/pytest/*
 ```
 
-# BenchMark Results
-Please download from [Zenodo dataset](https://zenodo.org/records/17572553) the result on your device and unzip the files 
+# 📦 Datasets & BenchMark Results
+Please download from [Zenodo dataset](https://zenodo.org/records/17572553) the result on your device and unzip the files. The downloaded dataset already follows the required folder structure, so you can directly use it for evaluation without any reorganization.
 
-# Required Directory Structure
+# 📁 Required Directory Structure
 
-Before running the evaluation pipeline, please make sure that your data is organized
-according to the required folder structure. All data should follow the structure below:
+> [!NOTE]
+> If you generate molecules with your own model, please ensure that your output is saved following the same directory structure as the official dataset.
+> 
+> Below is the expected structure for each UniProt target:
 
 ```
 P12345/     # Uniprot ID
@@ -63,7 +65,7 @@ P12345/     # Uniprot ID
 └─ P12345_lig.sdf
 ```
 
-# Run Generation with Your Model
+# 🧬 Run Generation with Your Model
 
 This section explains how to use the MolGenBench data structure to run *your own
 molecule generation model*. After molecules are generated, they can be evaluated
@@ -119,7 +121,7 @@ Use ONLY:
 - `<UniprotID>_<SeriesID>_reference_ligand_pose_with_h.sdf`
 
 
-# Running the Evaluation
+# ⚙️ Running the Evaluation
 
 After generating molecules with your model, you can evaluate them using the unified
 evaluation pipeline provided in `eval.py`.
@@ -171,7 +173,7 @@ evaluator = Evaluator(
 >    --model_name "YOUR_MODEL_NAME"
 > ```
 
-#  Finally, using notebook to show the final results:
+# 📊 Visualizing Final Results (Notebook)
 ``` For Example:
    denovo hit rate (please replace the name of dir)
    relative_dir/FigShow/Denovo_hit_recovery/Deonovo_repeats_hit_rate_boxplot.ipynb
