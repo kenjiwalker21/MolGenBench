@@ -1,12 +1,16 @@
 from pathlib import Path
 from typing import Dict, List
 from rdkit import Chem
+
+from posecheck.utils.chem import remove_radicals
+
 from molgenbench.io.types import MoleculeRecord
 
 
 def read_sdf_to_records(
     path: Path,
     protein_path: str,
+    pocket_path: str,
     ref_active_path: str,
 ) -> List[MoleculeRecord]:
     """
@@ -24,6 +28,7 @@ def read_sdf_to_records(
     records: List[MoleculeRecord] = []
 
     for i, mol in enumerate(suppl):
+        mol = remove_radicals(mol) if mol is not None else None
         smiles = Chem.MolToSmiles(mol) if mol is not None else None
         num_rotatable_bonds = Chem.rdMolDescriptors.CalcNumRotatableBonds(mol) if mol is not None else None
         record = MoleculeRecord(
@@ -34,6 +39,7 @@ def read_sdf_to_records(
             metadata={
                 "source_file": str(path),
                 "protein_path": protein_path, 
+                "pocket_path": pocket_path,
                 "ref_active_path": ref_active_path,
             },
         )

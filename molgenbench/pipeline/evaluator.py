@@ -5,9 +5,10 @@ from rdkit import Chem
 from typing import List, Dict, Any
 from molgenbench.io.types import MoleculeRecord
 from molgenbench.io.reader import read_sdf_to_records, attach_docked_molecules
-from molgenbench.metrics.basic import ValidMetric, QEDMetric, SAMetric
-from molgenbench.metrics.conformer import PoseBusterMetric, StrainEnergyMetrics, RMSDMetric
-from molgenbench.metrics.distribution import DiversityMetric, UniquenessMetric
+from molgenbench.metrics.basic import ValidMetric, QEDMetric, SAMetric, ChemFilterMetric
+from molgenbench.metrics.conformer import PoseBusterMetric, StrainEnergyMetrics, RMSDMetric, InteractionScoreMetric, ClashScoreMetric
+from molgenbench.metrics.distribution import DiversityMetric, UniquenessMetric, MotifDistMetric
+from molgenbench.metrics.hitrate import HitRediscoverMetric
 
 
 class Evaluator:
@@ -18,25 +19,46 @@ class Evaluator:
     """
 
     def __init__(self, metric_names: List[str] = None):
-        self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "PoseBuster", "StrainEnergy", "RMSD"]
+        self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "PoseBuster", "StrainEnergy", "RMSD", "HitRediscover"]
         self.metric_map = {
             "Validity": ValidMetric(),
             "QED": QEDMetric(),
             "SA": SAMetric(),
             "Uniqueness": UniquenessMetric(),
             "Diversity": DiversityMetric(),
+            "ChemFilter": ChemFilterMetric(),
             
             "PoseBuster": PoseBusterMetric(),
             "StrainEnergy": StrainEnergyMetrics(),
             "RMSD": RMSDMetric(),
+            "InteractionScore": InteractionScoreMetric(),
+            "ClashScore": ClashScoreMetric(),
+            
+            "MotifDist": MotifDistMetric(),
+            
+            "HitRediscover": HitRediscoverMetric(),
         }
 
         # 按类型分类 metric（单分子级 vs 数据集级）
         self.molecule_metrics = [
-            self.metric_map[n] for n in self.metric_names if n in ["Validity", "QED", "SA", "PoseBuster", "StrainEnergy", "RMSD"]
+            self.metric_map[n] for n in self.metric_names if n in [
+                "Validity",
+                "QED",
+                "SA",
+                
+                "PoseBuster",
+                "StrainEnergy",
+                "RMSD",
+                
+                "ClashScore",
+                "InteractionScore",
+                "ChemFilter",
+                "HitRediscover"
+                
+            ]
         ]
         self.dataset_metrics = [
-            self.metric_map[n] for n in self.metric_names if n in ["Diversity", "Uniqueness"]
+            self.metric_map[n] for n in self.metric_names if n in ["Diversity", "Uniqueness", "MotifDist"]
         ]
 
     
@@ -93,6 +115,8 @@ class Evaluator:
             if metric_name not in self.metric_names:
                 continue
             df = pd.DataFrame(rows)
+            if metric_name == "InteractionScore":
+                df = df.fillna(False)
             out_path = os.path.join(save_dir, f"{metric_name}.csv")
             df.to_csv(out_path, index=False)
 
@@ -148,7 +172,8 @@ class Evaluator:
         for uniprot in os.listdir(root_dir):
             uniprot_path = os.path.join(root_dir, uniprot, round, mode)
             prot_path = os.path.join(root_dir, uniprot, f"{uniprot}_prep.pdb")
-            ref_active_path = os.path.join(uniprot_path, "reference_active_molecules", f"{uniprot}_reference_active_molecules.sdf")
+            pocket_path = os.path.join(root_dir, uniprot, f"{uniprot}_pocket10.pdb")
+            ref_active_path = os.path.join(root_dir, uniprot, "reference_active_molecules", f"{uniprot}_reference_active_molecules.sdf")
 
             if mode == "De_novo_Results":
                 sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
@@ -156,7 +181,7 @@ class Evaluator:
                     continue
                 
                 docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                records = read_sdf_to_records(sdf_path, prot_path, ref_active_path)
+                records = read_sdf_to_records(sdf_path, prot_path, pocket_path, ref_active_path)
                 records = attach_docked_molecules(records, docked_path)
                 
                 records = self.evaluate_molecule_metrics(records)
@@ -180,7 +205,7 @@ class Evaluator:
                         continue
                     
                     docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                    records = read_sdf_to_records(sdf_path, prot_path, ref_active_path)
+                    records = read_sdf_to_records(sdf_path, prot_path, pocket_path, ref_active_path)
                     records = attach_docked_molecules(records, docked_path)
                     
                     records = self.evaluate_molecule_metrics(records)

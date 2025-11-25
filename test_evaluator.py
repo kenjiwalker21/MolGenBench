@@ -11,7 +11,14 @@ if __name__ == "__main__":
             "Diversity",
             "PoseBuster",
             "StrainEnergy",
-            "RMSD"
+            "RMSD",
+            
+            "ChemFilter",
+            "InteractionScore"
+            "ClashScore"
+            "MotifDist",
+            
+            "HitRediscover",
          ]
     )
     evaluator.run(
