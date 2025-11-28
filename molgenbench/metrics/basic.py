@@ -1,5 +1,8 @@
+import numpy as np
+from copy import deepcopy
 from rdkit import Chem
-from rdkit.Chem import QED
+from rdkit.Chem import QED, Descriptors, Lipinski, Crippen
+from rdkit.Chem.Scaffolds import MurckoScaffold
 from medchem.structural import CommonAlertsFilters, NIBRFilters
 from medchem.structural.lilly_demerits import LillyDemeritsFilters
 
@@ -51,6 +54,26 @@ class ChemFilterMetric(Metric):
     Outputs True if the molecule passes the filters, False otherwise.
     """
     name = "ChemFilter"
+    
+    def _getScaffold(self, smiles: str) -> str:
+        try:
+            mol = Chem.MolFromSmiles(smiles)
+            scaffold = MurckoScaffold.GetScaffoldForMol(mol)
+            scaffold_smiles = Chem.MolToSmiles(scaffold)
+            return scaffold_smiles
+        except:
+            return ''
+    
+    def obey_lipinski(self, mol):
+        mol = deepcopy(mol)
+        Chem.SanitizeMol(mol)
+        rule_1 = Descriptors.ExactMolWt(mol) < 500
+        rule_2 = Lipinski.NumHDonors(mol) <= 5
+        rule_3 = Lipinski.NumHAcceptors(mol) <= 10
+        logp = Crippen.MolLogP(mol)
+        rule_4 = (logp >= -2) & (logp <= 5)
+        rule_5 = Chem.rdMolDescriptors.CalcNumRotatableBonds(mol) <= 10
+        return np.sum([int(a) for a in [rule_1, rule_2, rule_3, rule_4, rule_5]])
 
     def passes_chem_filters(self, mol):
         common_filter = CommonAlertsFilters()
@@ -60,10 +83,11 @@ class ChemFilterMetric(Metric):
         results_common = common_filter([Chem.MolToSmiles(mol)])
         results_nibr = nibr_filter([Chem.MolToSmiles(mol)])
         results_lilly = lilly_filter([Chem.MolToSmiles(mol)])
-
-        # A molecule passes the filters only if it passes all individual filters
-        return results_common["pass_filter"][0] and results_nibr["pass_filter"][0] and results_lilly["pass_filter"][0]
-    
+        results_RO5 = self.obey_lipinski(mol) == 5
+        
+        pass_all = all([results_common[0], results_nibr[0], results_lilly[0], results_RO5])
+        
+        return pass_all
 
     def compute(self, record: MoleculeRecord):
         """
@@ -84,6 +108,12 @@ class ChemFilterMetric(Metric):
             passes_filters = self.passes_chem_filters(mol)
         except:
             passes_filters = False
+            
+        scaffold = self._getScaffold(record.smiles)
+        scaffold = scaffold if scaffold != '' else None
 
-        record.metadata[self.name] = passes_filters
-        return passes_filters
+        record.metadata[self.name] = {
+            self.name: passes_filters,
+            "scaffold": scaffold
+        }
+        return record.metadata[self.name]
