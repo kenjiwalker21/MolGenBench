@@ -108,7 +108,12 @@ class Evaluator:
         for k, v in dataset_metrics.items():
             if k not in dataset_metric_data:
                 dataset_metric_data[k] = []
-            dataset_metric_data[k].append({"uniprot": uniprot, "series": series, k: v})
+            if k == "MotifDist":
+                row = {"uniprot": uniprot, "series": series}
+                row.update(v)
+                dataset_metric_data[k].append(row)
+            else:
+                dataset_metric_data[k].append({"uniprot": uniprot, "series": series, k: v})
 
         # 3️⃣ 保存 molecule-level
         for metric_name, rows in molecule_metric_data.items():
@@ -181,7 +186,14 @@ class Evaluator:
                     continue
                 
                 docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                records = read_sdf_to_records(sdf_path, prot_path, pocket_path, ref_active_path)
+                records = read_sdf_to_records(
+                    uniprot,
+                    None,
+                    sdf_path, 
+                    prot_path, 
+                    pocket_path, 
+                    ref_active_path
+                )
                 records = attach_docked_molecules(records, docked_path)
                 
                 records = self.evaluate_molecule_metrics(records)
@@ -205,7 +217,14 @@ class Evaluator:
                         continue
                     
                     docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                    records = read_sdf_to_records(sdf_path, prot_path, pocket_path, ref_active_path)
+                    records = read_sdf_to_records(
+                        uniprot,
+                        series_id,
+                        sdf_path,
+                        prot_path,
+                        pocket_path,
+                        ref_active_path
+                    )
                     records = attach_docked_molecules(records, docked_path)
                     
                     records = self.evaluate_molecule_metrics(records)
