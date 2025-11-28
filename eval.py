@@ -1,6 +1,8 @@
+import os
 import argparse
 
 from molgenbench.pipeline.evaluator import Evaluator
+from molgenbench.pipeline.aggregator import Aggregator
 
 
 if __name__ == "__main__":
@@ -36,5 +38,16 @@ if __name__ == "__main__":
         model_name=args.model_name,
         round=args.round_name,
         mode=args.mode
+    )
+    
+    output_path = f"./logs/{args.round_name}/{args.mode}/{args.model_name}/results.yaml"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    aggregator = Aggregator()
+    aggregator.run(
+        root_dir=args.data_path,
+        model_name=args.model_name,
+        round=args.round_name,
+        mode=args.mode,
+        output_path=output_path,
     )
 
