@@ -12,6 +12,7 @@ from scipy.spatial.distance import jensenshannon
 from molgenbench.metrics.base import MetricBase, Metric
 from molgenbench.metrics.basic import is_valid
 from molgenbench.io.types import MoleculeRecord
+from molgenbench.io.reader import read_sdf_to_records
 
 class UniquenessMetric(Metric):
     """
@@ -79,7 +80,7 @@ class MotifDistMetric(Metric):
     Compute the distribution of molecular motifs (Atom, Ring, Function Group) in a set of molecules.
     Outputs a dictionary with fragment counts.
     """
-    name = "MotifDistribution"
+    name = "MotifDist"
 
     def _getAtomType(self, mol: Chem.Mol):
         return [atom.GetSymbol() for atom in mol.GetAtoms()]
@@ -142,8 +143,7 @@ class MotifDistMetric(Metric):
 
     def compute(
         self, 
-        ref_records: List[MoleculeRecord],
-        gen_records: List[MoleculeRecord]
+        gen_records: List[MoleculeRecord],
     ) -> Dict[str, Dict]:
         """
         Compute motif distributions between reference and generated molecules
@@ -157,6 +157,17 @@ class MotifDistMetric(Metric):
         # ---------------- collect motifs ----------------
         ref_atoms, ref_rings, ref_fgs = [], [], []
         gen_atoms, gen_rings, gen_fgs = [], [], []
+        
+        sample = gen_records[0]
+        ref_active_path = sample.metadata.get("ref_active_path", None)
+        ref_records = read_sdf_to_records(
+            uniprot=sample.uniprot,
+            series=sample.series,
+            path=ref_active_path,
+            protein_path=sample.metadata.get("protein_path", None),
+            pocket_path=None,
+            ref_active_path=None,
+        )
 
         for r in ref_records:
             mol = r.rdkit_mol
@@ -191,4 +202,4 @@ class MotifDistMetric(Metric):
             "Functional Group JS": self._evalSubTypeDist(ref_fg_count, gen_fg_count),
         }
 
-        return result
+        return {self.name: result}

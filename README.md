@@ -160,7 +160,7 @@ evaluator = Evaluator(
 ```
 
 > [!TIP]
-> RMSD and other 3D metrics require the `*_vina_docked.sdf` files.  
+> RMSD metrics require the `*_vina_docked.sdf` files.  
 > Please run `vina_docking.py` to generate the docked poses before evaluation.
 > You can generate them by running:
 > ```bash

@@ -12,6 +12,8 @@ class MoleculeRecord:
     """
     id: str
     smiles: str
+    uniprot: str
+    series: str
     rdkit_mol: Optional[Chem.Mol] = None
     num_rotatable_bonds: Optional[int] = None
     metadata: Dict[str, Any] = field(default_factory=dict)

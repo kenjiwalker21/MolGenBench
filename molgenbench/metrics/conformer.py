@@ -281,6 +281,10 @@ class InteractionScoreMetric(Metric):
     def _active_interaction_path(self, ref_active_path: Path) -> Path:
         """Return csv path for cached active interactions."""
         return ref_active_path.parent / f"{ref_active_path.stem}_interactions.csv"
+    
+    def _active_interaction_score_path(self, ref_active_path: Path) -> Path:
+        """Return csv path for cached active interaction scores."""
+        return ref_active_path.parent / f"{ref_active_path.stem}_interaction_scores.csv"
 
     def _load_or_compute_active_df(
         self,
@@ -292,12 +296,19 @@ class InteractionScoreMetric(Metric):
         if "vina_docked" not in ref_path.stem:
             ref_path = ref_path.parent / f"{ref_path.stem}_vina_docked.sdf"
         csv_path = self._active_interaction_path(ref_path)
+        score_csv_path = self._active_interaction_score_path(ref_path)
 
         if csv_path.exists():
-            return self._format_active_df(pd.read_csv(csv_path))
+            formatted_df = self._format_active_df(pd.read_csv(csv_path))
+            # Compute and save interaction scores if not already done
+            if not score_csv_path.exists():
+                self._compute_and_save_active_scores(formatted_df, score_csv_path)
+            return formatted_df
         
         active_records = read_sdf_to_records(
-            ref_path,
+            uniprot=None,
+            series=None,
+            path=ref_path,
             protein_path=protein_path,
             pocket_path=None,
             ref_active_path=None,
@@ -306,7 +317,27 @@ class InteractionScoreMetric(Metric):
         active_df = self._compute_fp_df(active_records, protein_path)
         active_df.to_csv(csv_path)
         # must be read again to ensure formatting
-        return self._format_active_df(pd.read_csv(csv_path))
+        formatted_df = self._format_active_df(pd.read_csv(csv_path))
+        # Compute and save interaction scores for each reference molecule
+        self._compute_and_save_active_scores(formatted_df, score_csv_path)
+        return formatted_df
+
+    def _compute_and_save_active_scores(
+        self,
+        formatted_df: pd.DataFrame,
+        score_csv_path: Path,
+    ) -> None:
+        """Compute interaction scores for each reference molecule and save to CSV."""
+        interaction_ref_map = self.getInteractionMap(formatted_df)
+        scores = []
+        for idx, row in formatted_df.iterrows():
+            row_dict = row.to_dict()
+            score = self.getInteractionScores(row_dict, interaction_ref_map)
+            scores.append(score)
+        # Create a new dataframe with scores added, without modifying original
+        df_with_scores = formatted_df.copy()
+        df_with_scores["InteractionScore"] = scores
+        df_with_scores.to_csv(score_csv_path, index=False)
 
     def getInteractionMap(self, df: pd.DataFrame, keep_threshold: float = 0.1) -> Dict[str, float]:
         """Compute the weighted interaction frequency map from active ligands."""
