@@ -126,7 +126,7 @@ After generating molecules with your model, you can evaluate them using the unif
 evaluation pipeline provided in `eval.py`.
 
 ```bash
-python run_eval.py \
+python eval.py \
     --data_path "/path/to/data" \
     --round_name "Round1" \
     --mode "De_novo_Results" \ or "Hit_to_Lead_Results"

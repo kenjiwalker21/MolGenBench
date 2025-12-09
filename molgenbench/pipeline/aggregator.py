@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Optional
 
-from sup_info.utils import uniprot_in_trainset, ref_smiles_scaffold_unique_count
+from sup_info.utils import uniprot_in_trainset, ref_smiles_scaffold_unique_count_denovo, ref_smiles_scaffold_unique_count_h2l
+from sup_info.affinity_info import normalized_affinity_info_map
 
 
 class Aggregator:
@@ -37,6 +38,7 @@ class Aggregator:
             "HitRediscover": self._aggregate_hit_rediscover,
         }
         
+        self.mode = None
         # Store reference percentiles for InteractionScore
         self.ref_interaction_percentiles = None
         self.ref_smiles = None
@@ -188,9 +190,14 @@ class Aggregator:
         
         # TODO think if group by series to calculate unique scaffolds
         # Count unique scaffolds per uniprot, then sum
-        unique_scaffolds_all = df_passed.groupby('uniprot')['scaffold'].nunique().sum()
-        unique_scaffolds_seen = df_passed_seen.groupby('uniprot')['scaffold'].nunique().sum()
-        unique_scaffolds_unseen = df_passed_unseen.groupby('uniprot')['scaffold'].nunique().sum()
+        if self.mode == "De_novo_Results":
+            unique_scaffolds_all = df_passed.groupby('uniprot')['scaffold'].nunique().sum()
+            unique_scaffolds_seen = df_passed_seen.groupby('uniprot')['scaffold'].nunique().sum()
+            unique_scaffolds_unseen = df_passed_unseen.groupby('uniprot')['scaffold'].nunique().sum()
+        elif self.mode == "Hit_to_Lead_Results":
+            unique_scaffolds_all = df_passed.groupby('series')['scaffold'].nunique().sum()
+            unique_scaffolds_seen = df_passed_seen.groupby('series')['scaffold'].nunique().sum()
+            unique_scaffolds_unseen = df_passed_unseen.groupby('series')['scaffold'].nunique().sum()
         
         return {
             "all": {
@@ -269,7 +276,6 @@ class Aggregator:
         }
         
     def _aggregate_interaction_score(self, df: pd.DataFrame, metric_name: str = "InteractionScore") -> Dict[str, Any]:
-        # TODO check hit2lead是不是不同的计算逻辑，✅ check过，都是用de novo 和hit2lead都是用同样的逻辑计算的
         
         # Group by uniprot and calculate proportion exceeding each percentile
         uniprot_stats = []
@@ -322,16 +328,86 @@ class Aggregator:
             "seen": {"ClashScore": values_seen},
             "unseen": {"ClashScore": values_unseen},
         }
-        
+    
     def _aggregate_hit_rediscover(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
-        """
-        Aggregate HitRediscover metrics:
-        - Hit Recovery: proportion of uniprots where at least one hit was found
-        - Hit Rate: proportion of unique hits per uniprot relative to generated molecules
-        - Hit Fraction: proportion of hits relative to total positive references
-        """
-        # TODO：区分denovo 和hit2lead
+        if self.mode == "De_novo_Results":
+            return self._aggregate_hit_rediscover_denovo(df, metric_name)
+        elif self.mode == "Hit_to_Lead_Results":
+            return self._aggrefate_hit_rediscover_h2l(df, metric_name)
+    
+    def _aggrefate_hit_rediscover_h2l(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+        series_stats = []
+        for series, group in df.groupby('series'):
+            if len(group) == 0:
+                continue
+            uniprot = group['uniprot'].iloc[0]
+            uniprot_series = f'{uniprot}_{series}'
+            
+            normalized_affinity_info = normalized_affinity_info_map[uniprot_series]
+            
+            # SMILES hits
+            unique_smiles_hits = group[group['smiles_hit'] == True]['found_smiles'].nunique()
+            has_smiles_hit = unique_smiles_hits > 0
+            
+            # Scaffold hits
+            unique_scaffold_hits = group[group['scaffold_hit'] == True]['found_scaffold'].nunique()
+            has_scaffold_hit = unique_scaffold_hits > 0
+            
+            # Get reference counts for this series
+            n_ref_smiles = ref_smiles_scaffold_unique_count_h2l[uniprot_series]
+            n_ref_scaffolds = ref_smiles_scaffold_unique_count_h2l[uniprot_series + "_scaffold"]
+            
+            # Affinity sum
+            found_smiles = group['found_smiles'].unique()
+            normalized_affinity_sum = 0.0
+            for smi in found_smiles:
+                if smi in normalized_affinity_info:
+                    normalized_affinity_sum += normalized_affinity_info[smi]
+            
+            series_stats.append({
+                'uniprot': uniprot,
+                'series': series,
+                # SMILES metrics
+                'has_smiles_hit': has_smiles_hit,
+                'smiles_hit_num': unique_smiles_hits,
+                'smiles_hit_rate': unique_smiles_hits / 200,
+                'smiles_hit_fraction': unique_smiles_hits / n_ref_smiles,
+                # Scaffold metrics
+                'has_scaffold_hit': has_scaffold_hit,
+                'scaffold_hit_rate': unique_scaffold_hits / 200,
+                'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
+                # Affinity
+                'normalized_affinity_sum': normalized_affinity_sum,
+            })
+            
+        stats_df = pd.DataFrame(series_stats)
         
+        # Split into seen and unseen
+        stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
+        stats_unseen = stats_df[~stats_df['uniprot'].isin(uniprot_in_trainset)]
+        
+        def calc_metrics(sub_df):
+            return {
+                # SMILES metrics
+                "smiles_hit_recovery": sub_df['has_smiles_hit'].sum(),
+                "smiles_hit_rate": sub_df['smiles_hit_rate'].mean(),
+                "smiles_hit_fraction": sub_df['smiles_hit_fraction'].mean(),
+                # Scaffold metrics
+                "scaffold_hit_recovery": sub_df['has_scaffold_hit'].sum(),
+                "scaffold_hit_rate": sub_df['scaffold_hit_rate'].mean(),
+                "scaffold_hit_fraction": sub_df['scaffold_hit_fraction'].mean(),
+                # Affinity
+                'smiles_hit_num': sub_df['smiles_hit_num'].sum(),
+                'Mean_normalized_affinity': sub_df['normalized_affinity_sum'].sum() / sub_df['smiles_hit_num'].sum() if sub_df['smiles_hit_num'].sum() > 0 else 0.0,
+               }
+        
+        return {
+            "all": calc_metrics(stats_df),
+            "seen": calc_metrics(stats_seen),
+            "unseen": calc_metrics(stats_unseen),
+        }
+        
+    def _aggregate_hit_rediscover_denovo(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         # Group by uniprot to calculate per-uniprot stats
         uniprot_stats = []
         for uniprot, group in df.groupby('uniprot'):
@@ -353,8 +429,8 @@ class Aggregator:
             has_scaffold_hit_not_in_trainset = unique_scaffold_hits_not_in_trainset > 0
             
             # Get reference counts for this uniprot
-            n_ref_smiles = ref_smiles_scaffold_unique_count[uniprot]
-            n_ref_scaffolds = ref_smiles_scaffold_unique_count[uniprot + "_scaffold"]
+            n_ref_smiles = ref_smiles_scaffold_unique_count_denovo[uniprot]
+            n_ref_scaffolds = ref_smiles_scaffold_unique_count_denovo[uniprot + "_scaffold"]
             
             # Target Aware Score calculations
             smiles_intersection_specific = unique_smiles_hits / group['gen_smiles'].nunique()
@@ -387,7 +463,7 @@ class Aggregator:
                 'scaffold_hit_rate_not_in_trainset': unique_scaffold_hits_not_in_trainset / 1000,
                 'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
                 'scaffold_hit_fraction_not_in_trainset': unique_scaffold_hits_not_in_trainset / n_ref_scaffolds,
-                'scaffold_intersection_specific': scaffold_intersection_specific,
+                # 'scaffold_intersection_specific': scaffold_intersection_specific,
                 'scaffold_TAScore': scaffold_target_aware_score,
             })
         
@@ -401,7 +477,6 @@ class Aggregator:
             smiles_ta = sub_df['smiles_TAScore']
             scaffold_ta = sub_df['scaffold_TAScore']
             
-            # TODO: hitrate and hitfraction 计算的时候，对于那些没有生成的uniprot要不要取0
             return {
                 # SMILES metrics
                 "smiles_hit_recovery": sub_df['has_smiles_hit'].sum(),
@@ -421,7 +496,7 @@ class Aggregator:
                 "scaffold_hit_rate_not_in_trainset": sub_df['scaffold_hit_rate_not_in_trainset'].mean(),
                 "scaffold_hit_fraction": sub_df['scaffold_hit_fraction'].mean(),
                 "scaffold_hit_fraction_not_in_trainset": sub_df['scaffold_hit_fraction_not_in_trainset'].mean(),
-                "scaffold_intersection_specific": sub_df['scaffold_intersection_specific'].mean(),
+                # "scaffold_intersection_specific": sub_df['scaffold_intersection_specific'].mean(),
                 "scaffold_TAScore_0-1_count": ((scaffold_ta >= 0) & (scaffold_ta < 1)).sum(),
                 "scaffold_TAScore_1-10_count": ((scaffold_ta >= 1) & (scaffold_ta < 10)).sum(),
                 "scaffold_TAScore_10-100_count": ((scaffold_ta >= 10) & (scaffold_ta < 100)).sum(),
@@ -474,6 +549,7 @@ class Aggregator:
             Aggregated results dictionary
         """
         # Step 0: Load reference interaction scores and reference SMILES/scaffolds
+        self.mode = mode
         self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
         self.ref_smiles, self.ref_scaffold, self.ref_all_scaffold_to_smiles = self.load_reference_smiles_and_scaffolds(root_dir)
         
