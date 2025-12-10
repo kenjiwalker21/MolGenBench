@@ -19,6 +19,11 @@ class HitRediscoverMetric(Metric):
     
     def __init__(self, fixStereoFrom3D: bool = True):
         self.fixStereoFrom3D = fixStereoFrom3D
+        # cache for reference maps
+        self._cached_ref_active_path = None
+        self._cached_series = None
+        self._cached_ref_inchi_map_ref_smiles = None
+        self._cached_ref_inchi_map_ref_scaffold = None
 
     def _enumerate_tautomer_and_partial_chirality(self, smiles):
         try:
@@ -54,13 +59,29 @@ class HitRediscoverMetric(Metric):
     
     def _load_reference_maps(self, ref_active_path: str, series: str = None):
         """
-        Unified method to load reference maps.
+        Unified method to load reference maps with caching.
         If series is not None, use h2l logic; otherwise use denovo logic.
         """
+        # check if cache is valid
+        if (self._cached_ref_active_path == ref_active_path 
+            and self._cached_series == series
+            and self._cached_ref_inchi_map_ref_smiles is not None
+            and self._cached_ref_inchi_map_ref_scaffold is not None):
+            return self._cached_ref_inchi_map_ref_smiles, self._cached_ref_inchi_map_ref_scaffold
+        
+        # load reference maps
         if series is not None:
-            return self._load_reference_maps_h2l(ref_active_path, series)
+            ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps_h2l(ref_active_path, series)
         else:
-            return self._load_reference_maps_denovo(ref_active_path)
+            ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps_denovo(ref_active_path)
+        
+        # update cache
+        self._cached_ref_active_path = ref_active_path
+        self._cached_series = series
+        self._cached_ref_inchi_map_ref_smiles = ref_inchi_map_ref_smiles
+        self._cached_ref_inchi_map_ref_scaffold = ref_inchi_map_ref_scaffold
+        
+        return ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold
 
     def _load_reference_maps_h2l(self, ref_active_path: str, series: str):
         cached_inchi_map_smiles_path = ref_active_path.replace('_reference_active_molecules.sdf', f'_{series}_inchi_map_smiles.pkl')
@@ -127,7 +148,7 @@ class HitRediscoverMetric(Metric):
         cache_scaffold_path = ref_active_path.replace('_reference_active_molecules.sdf', '_scaffold.pkl')
         cached_inchi_map_smiles_path = ref_active_path.replace('_reference_active_molecules.sdf', '_inchi_map_smiles.pkl')
         cached_inchi_map_scaffold_path = ref_active_path.replace('_reference_active_molecules.sdf', '_inchi_map_scaffold.pkl')
-        
+
         # load or create cached reference smiles map
         if not os.path.exists(cached_inchi_map_smiles_path):
             ref_smiles_set = set()
@@ -220,7 +241,6 @@ class HitRediscoverMetric(Metric):
             "found_scaffold_inchi": None,
             "found_scaffold_inchi_in_trainset": None,
         }
-
         mol = record.rdkit_mol
         if mol is None:
             record.metadata[self.name] = result

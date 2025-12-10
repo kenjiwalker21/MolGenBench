@@ -34,7 +34,7 @@ def read_sdf_to_records(
         smiles = Chem.MolToSmiles(mol) if mol is not None else None
         num_rotatable_bonds = Chem.rdMolDescriptors.CalcNumRotatableBonds(mol) if mol is not None else None
         record = MoleculeRecord(
-            id=mol.GetProp("_Name"),
+            id=mol.GetProp("_Name") if mol is not None else None,
             smiles=smiles,
             uniprot=uniprot,
             series=series,

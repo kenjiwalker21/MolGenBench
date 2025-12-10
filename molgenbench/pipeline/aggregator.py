@@ -41,9 +41,9 @@ class Aggregator:
         self.mode = None
         # Store reference percentiles for InteractionScore
         self.ref_interaction_percentiles = None
+        
         self.ref_smiles = None
         self.ref_scaffold = None
-        self.ref_all_scaffold_to_smiles = None
 
     # ========================== #
     #   CSV Collection Methods
@@ -351,6 +351,7 @@ class Aggregator:
             
             # Scaffold hits
             unique_scaffold_hits = group[group['scaffold_hit'] == True]['found_scaffold'].nunique()
+            unique_scaffold_hits_to_smiles = group[group['scaffold_hit'] == True]['gen_smiles'].nunique()
             has_scaffold_hit = unique_scaffold_hits > 0
             
             # Get reference counts for this series
@@ -374,7 +375,7 @@ class Aggregator:
                 'smiles_hit_fraction': unique_smiles_hits / n_ref_smiles,
                 # Scaffold metrics
                 'has_scaffold_hit': has_scaffold_hit,
-                'scaffold_hit_rate': unique_scaffold_hits / 200,
+                'scaffold_hit_rate': unique_scaffold_hits_to_smiles / 200,
                 'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
                 # Affinity
                 'normalized_affinity_sum': normalized_affinity_sum,
@@ -426,6 +427,7 @@ class Aggregator:
             unique_scaffold_hits_to_smiles = group[group['scaffold_hit'] == True]['gen_smiles'].nunique()
             has_scaffold_hit = unique_scaffold_hits > 0
             unique_scaffold_hits_not_in_trainset = group[(group['scaffold_hit'] == True) & (group['found_scaffold_inchi_in_trainset'] == False)]['found_scaffold'].nunique()
+            unique_scaffold_hits_not_in_trainset_to_smiles = group[(group['scaffold_hit'] == True) & (group['found_scaffold_inchi_in_trainset'] == False)]['gen_smiles'].nunique()
             has_scaffold_hit_not_in_trainset = unique_scaffold_hits_not_in_trainset > 0
             
             # Get reference counts for this uniprot
@@ -439,10 +441,12 @@ class Aggregator:
             
             scaffold_intersection_specific = unique_scaffold_hits_to_smiles / group['gen_smiles'].nunique()
             all_intersection_scaffold = set(self.ref_scaffold[uniprot]).intersection(set(df['gen_scaffold']))
+            # Build dict only for intersection scaffolds
+            gen_all_scaffold_to_smiles = df.groupby('gen_scaffold')['gen_smiles'].apply(set).to_dict()
             find_scaffold_to_smiles = set()
             for scaffold in all_intersection_scaffold:
-                if scaffold in self.ref_all_scaffold_to_smiles:
-                    find_scaffold_to_smiles.update(self.ref_all_scaffold_to_smiles[scaffold])
+                if scaffold in gen_all_scaffold_to_smiles:
+                    find_scaffold_to_smiles.update(gen_all_scaffold_to_smiles[scaffold])
             scaffold_intersection_all = len(find_scaffold_to_smiles) / df['gen_smiles'].nunique()
             scaffold_target_aware_score = scaffold_intersection_specific / (scaffold_intersection_all + 1e-10)
             
@@ -459,8 +463,8 @@ class Aggregator:
                 # Scaffold metrics
                 'has_scaffold_hit': has_scaffold_hit,
                 'has_scaffold_hit_not_in_trainset': has_scaffold_hit_not_in_trainset,
-                'scaffold_hit_rate': unique_scaffold_hits / 1000,
-                'scaffold_hit_rate_not_in_trainset': unique_scaffold_hits_not_in_trainset / 1000,
+                'scaffold_hit_rate': unique_scaffold_hits_to_smiles / 1000,
+                'scaffold_hit_rate_not_in_trainset': unique_scaffold_hits_not_in_trainset_to_smiles / 1000,
                 'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
                 'scaffold_hit_fraction_not_in_trainset': unique_scaffold_hits_not_in_trainset / n_ref_scaffolds,
                 # 'scaffold_intersection_specific': scaffold_intersection_specific,
@@ -551,7 +555,7 @@ class Aggregator:
         # Step 0: Load reference interaction scores and reference SMILES/scaffolds
         self.mode = mode
         self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
-        self.ref_smiles, self.ref_scaffold, self.ref_all_scaffold_to_smiles = self.load_reference_smiles_and_scaffolds(root_dir)
+        self.ref_smiles, self.ref_scaffold = self.load_reference_smiles_and_scaffolds(root_dir)
         
         # Step 1: Collect all CSVs
         all_dfs = self.collect_all_csvs(root_dir, model_name, round, mode)
@@ -585,7 +589,6 @@ class Aggregator:
         """
         ref_smiles = {}
         ref_scaffolds = {}
-        ref_all_scaffolds_to_smiles = {}
         
         for uniprot in os.listdir(root_dir):
             cached_ref_smiles_path = os.path.join(
@@ -607,14 +610,7 @@ class Aggregator:
             ref_smiles[uniprot] = cached_ref_smiles
             ref_scaffolds[uniprot] = set(cached_ref_scaffold.keys())
             
-            # Merge scaffold -> smiles mappings, combining sets for identical scaffolds
-            for scaffold, smiles_set in cached_ref_scaffold.items():
-                if scaffold in ref_all_scaffolds_to_smiles:
-                    ref_all_scaffolds_to_smiles[scaffold].update(smiles_set)
-                else:
-                    ref_all_scaffolds_to_smiles[scaffold] = smiles_set.copy()
-            
-        return ref_smiles, ref_scaffolds, ref_all_scaffolds_to_smiles
+        return ref_smiles, ref_scaffolds
 
     def load_reference_interaction_scores(self, root_dir: str) -> Dict[str, Dict[str, float]]:
         """
