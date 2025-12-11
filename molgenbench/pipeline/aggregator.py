@@ -2,7 +2,6 @@ import os
 import yaml
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from sup_info.utils import uniprot_in_trainset, ref_smiles_scaffold_unique_count_denovo, ref_smiles_scaffold_unique_count_h2l
@@ -42,7 +41,7 @@ class Aggregator:
         }
         
         self.mode = None
-        self.output_path = None
+        self.output_dir = None
         # Store reference percentiles for InteractionScore
         self.ref_interaction_percentiles = None
         
