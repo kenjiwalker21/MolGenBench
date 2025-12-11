@@ -2,6 +2,7 @@ import os
 import yaml
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from sup_info.utils import uniprot_in_trainset, ref_smiles_scaffold_unique_count_denovo, ref_smiles_scaffold_unique_count_h2l
@@ -17,7 +18,9 @@ class Aggregator:
     def __init__(self, metric_names: List[str] = None):
         self.metric_names = metric_names or [
             "Validity", "QED", "SA", "Uniqueness", "Diversity",
-            "PoseBuster", "StrainEnergy", "RMSD", "HitRediscover"
+            "MotifDist", "ChemFilter",
+            "PoseBuster", "StrainEnergy", "RMSD", "InteractionScore", "ClashScore",
+            "HitRediscover"
         ]
         
         # Metric -> aggregation function mapping
@@ -39,6 +42,7 @@ class Aggregator:
         }
         
         self.mode = None
+        self.output_path = None
         # Store reference percentiles for InteractionScore
         self.ref_interaction_percentiles = None
         
@@ -382,6 +386,7 @@ class Aggregator:
             })
             
         stats_df = pd.DataFrame(series_stats)
+        stats_df.to_csv(os.path.join(self.output_path, 'hitrediscovery_detail.csv'), index=False)
         
         # Split into seen and unseen
         stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
@@ -467,11 +472,16 @@ class Aggregator:
                 'scaffold_hit_rate_not_in_trainset': unique_scaffold_hits_not_in_trainset_to_smiles / 1000,
                 'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
                 'scaffold_hit_fraction_not_in_trainset': unique_scaffold_hits_not_in_trainset / n_ref_scaffolds,
-                # 'scaffold_intersection_specific': scaffold_intersection_specific,
                 'scaffold_TAScore': scaffold_target_aware_score,
+                # debug
+                'smiles_intersection_specific': smiles_intersection_specific,
+                'smiles_intersection_all': smiles_intersection_all,
+                'scaffold_intersection_specific': scaffold_intersection_specific,
+                'scaffold_intersection_all': scaffold_intersection_all,
             })
         
         stats_df = pd.DataFrame(uniprot_stats)
+        stats_df.to_csv(os.path.join(self.output_path, 'hitrediscovery_detail.csv'), index=False)
         
         # Split into seen and unseen
         stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
@@ -554,9 +564,10 @@ class Aggregator:
         """
         # Step 0: Load reference interaction scores and reference SMILES/scaffolds
         self.mode = mode
-        self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
+        if "InteractionScore" in self.metric_names:
+            self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
         self.ref_smiles, self.ref_scaffold = self.load_reference_smiles_and_scaffolds(root_dir)
-        
+        self.output_dir = os.path.dirname(output_path)
         # Step 1: Collect all CSVs
         all_dfs = self.collect_all_csvs(root_dir, model_name, round, mode)
         
