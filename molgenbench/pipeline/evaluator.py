@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from rdkit import Chem
+from tqdm import tqdm
 from typing import List, Dict, Any
 from molgenbench.io.types import MoleculeRecord
 from molgenbench.io.reader import read_sdf_to_records, attach_docked_molecules
@@ -13,7 +14,6 @@ from molgenbench.metrics.hitrate import HitRediscoverMetric
 
 class Evaluator:
     """
-    42
     Unified evaluator that handles molecule-level and dataset-level evaluation,
     grouped by Uniprot or Series depending on task type.
     """
@@ -133,7 +133,16 @@ class Evaluator:
             out_path = os.path.join(save_dir, f"{metric_name}.csv")
             df.to_csv(out_path, index=False)
             
-    
+    def _check_metrics_exist(self, results_dir: str) -> bool:
+        """检查所有需要的 metric CSV 文件是否已存在"""
+        if not os.path.exists(results_dir):
+            return False
+        for metric_name in self.metric_names:
+            csv_path = os.path.join(results_dir, f"{metric_name}.csv")
+            if not os.path.exists(csv_path):
+                return False
+        return True
+
     # ---------------------------- #
     #   Molecule-level evaluation
     # ---------------------------- #
@@ -162,7 +171,8 @@ class Evaluator:
         root_dir: str, 
         model_name: str, 
         round: str,
-        mode: str = "De_novo_Results"
+        mode: str = "De_novo_Results",
+        skip_existing: bool = False
     ) -> pd.DataFrame:
         """
         Run the full evaluation pipeline.
@@ -170,11 +180,12 @@ class Evaluator:
         Args:
             root_dir: directory containing Uniprot folders
             mode: 'denovo' or 'hit2lead'
+            skip_existing: if True, skip evaluation when all metric CSVs already exist
         Returns:
             pd.DataFrame of aggregated results
         """
 
-        for uniprot in os.listdir(root_dir):
+        for uniprot in tqdm(os.listdir(root_dir)):
             uniprot_path = os.path.join(root_dir, uniprot, round, mode)
             prot_path = os.path.join(root_dir, uniprot, f"{uniprot}_prep.pdb")
             pocket_path = os.path.join(root_dir, uniprot, f"{uniprot}_pocket10.pdb")
@@ -183,6 +194,11 @@ class Evaluator:
             if mode == "De_novo_Results":
                 sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
                 if not os.path.exists(sdf_path):
+                    continue
+                
+                # check existing results, skip if all exist
+                results_dir = os.path.join(uniprot_path, model_name, "results")
+                if skip_existing and self._check_metrics_exist(results_dir):
                     continue
                 
                 docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
@@ -214,6 +230,11 @@ class Evaluator:
                     
                     sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
                     if not os.path.exists(sdf_path):
+                        continue
+                    
+                    # check existing results, skip if all exist
+                    results_dir = os.path.join(series_path, model_name, "results")
+                    if skip_existing and self._check_metrics_exist(results_dir):
                         continue
                     
                     docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")

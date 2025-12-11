@@ -37,7 +37,8 @@ if __name__ == "__main__":
         root_dir=args.data_path,
         model_name=args.model_name,
         round=args.round_name,
-        mode=args.mode
+        mode=args.mode,
+        skip_existing=False,
     )
     
     output_path = f"./logs/{args.round_name}/{args.mode}/{args.model_name}/results.yaml"
