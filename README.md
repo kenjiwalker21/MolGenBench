@@ -2,8 +2,8 @@
 # MolGenBench: CodeBase for "Benchmarking Real-World Applicability of Molecular Generative Models from De novo Design to Lead Optimization with MolGenBench"
 ![MolGenBench overview](./FigShow/MolGenBench.svg "Overview of MolGenBench pipeline")
 
-> [!NOTE]
-> **Please note that our current code only provides the computational workflow for reproducing the paper's results. A more elegantly refactored codebase will be updated as soon as possible.**
+## 🔔 News
+[2025-12-12] We have released Version 2 of the [dataset](https://zenodo.org/records/17890389). Compared with Version 1, this update additionally includes precomputed InChI and SMILES for active molecules, which significantly accelerates the HitRediscovery calculation.
 
 # 🛠️ Environment Setup
 ```bash
