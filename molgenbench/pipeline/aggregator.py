@@ -385,7 +385,7 @@ class Aggregator:
             })
             
         stats_df = pd.DataFrame(series_stats)
-        stats_df.to_csv(os.path.join(self.output_path, 'hitrediscovery_detail.csv'), index=False)
+        stats_df.to_csv(os.path.join(self.output_dir, 'hitrediscovery_detail.csv'), index=False)
         
         # Split into seen and unseen
         stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
@@ -480,7 +480,7 @@ class Aggregator:
             })
         
         stats_df = pd.DataFrame(uniprot_stats)
-        stats_df.to_csv(os.path.join(self.output_path, 'hitrediscovery_detail.csv'), index=False)
+        stats_df.to_csv(os.path.join(self.output_dir, 'hitrediscovery_detail.csv'), index=False)
         
         # Split into seen and unseen
         stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
