@@ -39,6 +39,7 @@ if __name__ == "__main__":
         round=args.round_name,
         mode=args.mode,
         skip_existing=False,
+        n_jobs=16,
     )
     
     output_path = f"./logs/{args.round_name}/{args.mode}/{args.model_name}/results.yaml"
