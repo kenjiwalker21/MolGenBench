@@ -4,6 +4,7 @@ import pandas as pd
 from rdkit import Chem
 from tqdm import tqdm
 from typing import List, Dict, Any
+from joblib import Parallel, delayed
 from molgenbench.io.types import MoleculeRecord
 from molgenbench.io.reader import read_sdf_to_records, attach_docked_molecules
 from molgenbench.metrics.basic import ValidMetric, QEDMetric, SAMetric, ChemFilterMetric
@@ -163,6 +164,69 @@ class Evaluator:
             results.update(metric.compute(records))
         return results
 
+    def _process_uniprot(
+        self,
+        uniprot: str,
+        root_dir: str,
+        model_name: str,
+        round: str,
+        mode: str,
+        skip_existing: bool,
+    ):
+        """Process a single uniprot entry."""
+        uniprot_path = os.path.join(root_dir, uniprot, round, mode)
+        prot_path = os.path.join(root_dir, uniprot, f"{uniprot}_prep.pdb")
+        pocket_path = os.path.join(root_dir, uniprot, f"{uniprot}_pocket10.pdb")
+        ref_active_path = os.path.join(root_dir, uniprot, "reference_active_molecules", f"{uniprot}_reference_active_molecules.sdf")
+
+        if mode == "De_novo_Results":
+            sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
+            if not os.path.exists(sdf_path):
+                return
+            
+            results_dir = os.path.join(uniprot_path, model_name, "results")
+            if skip_existing and self._check_metrics_exist(results_dir):
+                return
+            
+            docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
+            records = read_sdf_to_records(
+                uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path
+            )
+            records = attach_docked_molecules(records, docked_path)
+            
+            records = self.evaluate_molecule_metrics(records)
+            dataset_results = self.evaluate_dataset_metrics(records)
+            self._save_metrics_to_csv(
+                records, dataset_results, save_dir=results_dir,
+                uniprot=uniprot, series=None, model_name=model_name, mode=mode,
+            )
+
+        elif mode == "Hit_to_Lead_Results":
+            if not os.path.exists(uniprot_path):
+                return
+            for series_id in os.listdir(uniprot_path):
+                series_path = os.path.join(uniprot_path, series_id)
+                sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
+                if not os.path.exists(sdf_path):
+                    continue
+                
+                results_dir = os.path.join(series_path, model_name, "results")
+                if skip_existing and self._check_metrics_exist(results_dir):
+                    continue
+                
+                docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
+                records = read_sdf_to_records(
+                    uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path
+                )
+                records = attach_docked_molecules(records, docked_path)
+                
+                records = self.evaluate_molecule_metrics(records)
+                dataset_results = self.evaluate_dataset_metrics(records)
+                self._save_metrics_to_csv(
+                    records, dataset_results, save_dir=results_dir,
+                    uniprot=uniprot, series=series_id, model_name=model_name, mode=mode,
+                )
+
     # ---------------------------- #
     #   顶层 pipeline
     # ---------------------------- #
@@ -172,7 +236,8 @@ class Evaluator:
         model_name: str, 
         round: str,
         mode: str = "De_novo_Results",
-        skip_existing: bool = False
+        skip_existing: bool = False,
+        n_jobs: int = 1,
     ) -> pd.DataFrame:
         """
         Run the full evaluation pipeline.
@@ -184,78 +249,18 @@ class Evaluator:
         Returns:
             pd.DataFrame of aggregated results
         """
-
-        for uniprot in tqdm(os.listdir(root_dir)):
-            uniprot_path = os.path.join(root_dir, uniprot, round, mode)
-            prot_path = os.path.join(root_dir, uniprot, f"{uniprot}_prep.pdb")
-            pocket_path = os.path.join(root_dir, uniprot, f"{uniprot}_pocket10.pdb")
-            ref_active_path = os.path.join(root_dir, uniprot, "reference_active_molecules", f"{uniprot}_reference_active_molecules.sdf")
-
-            if mode == "De_novo_Results":
-                sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
-                if not os.path.exists(sdf_path):
-                    continue
-                
-                # check existing results, skip if all exist
-                results_dir = os.path.join(uniprot_path, model_name, "results")
-                if skip_existing and self._check_metrics_exist(results_dir):
-                    continue
-                
-                docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                records = read_sdf_to_records(
-                    uniprot,
-                    None,
-                    sdf_path, 
-                    prot_path, 
-                    pocket_path, 
-                    ref_active_path
+        
+        uniprot_list = os.listdir(root_dir)
+        
+        if n_jobs != 1:
+            Parallel(n_jobs=n_jobs)(
+                delayed(self._process_uniprot)(
+                    uniprot, root_dir, model_name, round, mode, skip_existing
                 )
-                records = attach_docked_molecules(records, docked_path)
-                
-                records = self.evaluate_molecule_metrics(records)
-                dataset_results = self.evaluate_dataset_metrics(records)
-                self._save_metrics_to_csv(
-                    records,
-                    dataset_results,
-                    save_dir=os.path.join(uniprot_path, model_name, "results"),
-                    uniprot=uniprot,
-                    series=None,
-                    model_name=model_name,
-                    mode=mode,
+                for uniprot in tqdm(uniprot_list)
+            )
+        else:
+            for uniprot in tqdm(uniprot_list):
+                self._process_uniprot(
+                    uniprot, root_dir, model_name, round, mode, skip_existing
                 )
-
-            elif mode == "Hit_to_Lead_Results":
-                for series_id in os.listdir(uniprot_path):
-                    series_path = os.path.join(uniprot_path, series_id)
-                    
-                    sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
-                    if not os.path.exists(sdf_path):
-                        continue
-                    
-                    # check existing results, skip if all exist
-                    results_dir = os.path.join(series_path, model_name, "results")
-                    if skip_existing and self._check_metrics_exist(results_dir):
-                        continue
-                    
-                    docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                    records = read_sdf_to_records(
-                        uniprot,
-                        series_id,
-                        sdf_path,
-                        prot_path,
-                        pocket_path,
-                        ref_active_path
-                    )
-                    records = attach_docked_molecules(records, docked_path)
-                    
-                    records = self.evaluate_molecule_metrics(records)
-                    dataset_results = self.evaluate_dataset_metrics(records)
-                    self._save_metrics_to_csv(
-                        records,
-                        dataset_results,
-                        save_dir=os.path.join(series_path, model_name, "results"),
-                        uniprot=uniprot,
-                        series=series_id,
-                        model_name=model_name,
-                        mode=mode,
-                    )

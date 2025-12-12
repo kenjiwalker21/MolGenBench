@@ -34,7 +34,7 @@ pytest -q molgenbench/pytest/*
 ```
 
 # 📦 Datasets & Benchmark Results
-Please download from [Zenodo dataset](https://zenodo.org/records/17572553) the result on your device and unzip the files. The downloaded dataset already follows the required folder structure, so you can directly use it for evaluation without any reorganization.
+Please download from [Zenodo dataset](https://zenodo.org/records/17890389) the result on your device and unzip the files. The downloaded dataset already follows the required folder structure, so you can directly use it for evaluation without any reorganization.
 
 # 📁 Required Directory Structure
 
