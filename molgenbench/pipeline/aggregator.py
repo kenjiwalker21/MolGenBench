@@ -567,6 +567,7 @@ class Aggregator:
             self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
         self.ref_smiles, self.ref_scaffold = self.load_reference_smiles_and_scaffolds(root_dir)
         self.output_dir = os.path.dirname(output_path)
+        os.makedirs(self.output_dir, exist_ok=True)
         # Step 1: Collect all CSVs
         all_dfs = self.collect_all_csvs(root_dir, model_name, round, mode)
         
