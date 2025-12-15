@@ -19,7 +19,7 @@ class Evaluator:
     grouped by Uniprot or Series depending on task type.
     """
 
-    def __init__(self, metric_names: List[str] = None):
+    def __init__(self, metric_names: List[str] = None, fixStereoFrom3D: bool = True):
         self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "PoseBuster", "StrainEnergy", "RMSD", "HitRediscover"]
         self.metric_map = {
             "Validity": ValidMetric(),
@@ -37,7 +37,7 @@ class Evaluator:
             
             "MotifDist": MotifDistMetric(),
             
-            "HitRediscover": HitRediscoverMetric(),
+            "HitRediscover": HitRediscoverMetric(fixStereoFrom3D=fixStereoFrom3D),
         }
 
         # 按类型分类 metric（单分子级 vs 数据集级）
