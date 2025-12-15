@@ -31,7 +31,8 @@ if __name__ == "__main__":
             "InteractionScore"
             "ClashScore"
             
-         ]
+         ],
+        fixStereoFrom3D=True, # Turn false if your model directly output smiles
     )
     evaluator.run(
         root_dir=args.data_path,
