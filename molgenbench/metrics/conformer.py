@@ -204,6 +204,8 @@ class InteractionScoreMetric(Metric):
 
     def _filterMol(self, mol: Chem.Mol) -> bool:
         """Filter atoms in a molecule based on their atomic symbol and coordinates."""
+        if mol is None:
+            return False
         
         if Lipinski.NumRotatableBonds(mol) >= 15:
             return False
