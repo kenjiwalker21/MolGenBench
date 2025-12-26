@@ -210,6 +210,12 @@ class Evaluator:
                 if not os.path.exists(sdf_path):
                     continue
                 
+                try:
+                    Chem.SDMolSupplier(str(sdf_path))
+                except:
+                    # print(f"Empty SDF file: {sdf_path}")
+                    continue
+                
                 results_dir = os.path.join(series_path, model_name, "results")
                 if skip_existing and self._check_metrics_exist(results_dir):
                     continue

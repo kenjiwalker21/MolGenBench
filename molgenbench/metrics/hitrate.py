@@ -256,7 +256,8 @@ class HitRediscoverMetric(Metric):
         gen_smiles_inchi = Chem.MolToInchi(gen_mol)
         
         gen_scaffold = self._getScaffold(gen_smiles)
-        gen_scaffold_inchi = Chem.MolToInchi(Chem.MolFromSmiles(gen_scaffold)) if gen_scaffold != '' else None
+        gen_scaffold_mol = Chem.MolFromSmiles(gen_scaffold) if gen_scaffold != '' else None
+        gen_scaffold_inchi = Chem.MolToInchi(gen_scaffold_mol) if gen_scaffold_mol != None else None
 
         result["gen_smiles"] = gen_smiles
         result["gen_scaffold"] = gen_scaffold if gen_scaffold != '' else None

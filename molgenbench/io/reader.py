@@ -26,7 +26,7 @@ def read_sdf_to_records(
     Returns:
         List[MoleculeRecord]: List of MoleculeRecord objects.
     """
-    suppl = Chem.SDMolSupplier(str(path), removeHs=False)
+    suppl = Chem.SDMolSupplier(str(path))
     records: List[MoleculeRecord] = []
 
     for i, mol in enumerate(suppl):
