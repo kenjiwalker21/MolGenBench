@@ -11,6 +11,7 @@ if __name__ == "__main__":
     parser.add_argument('--round_name', type=str, default='Round1', help='Name of the current round')
     parser.add_argument('--mode', choices=['De_novo_Results', 'Hit_to_Lead_Results'], default='De_novo_Results', help='Task mode')
     parser.add_argument('--model_name', type=str, required=True, help='Name of the generative model')
+    parser.add_argument('--fixStereoFrom3D', action='store_true', help='Whether to fix stereochemistry from 3D structures')
     args = parser.parse_args()
     
     evaluator = Evaluator(
@@ -28,11 +29,11 @@ if __name__ == "__main__":
             "PoseBuster",
             "StrainEnergy",
             "RMSD",
-            "InteractionScore"
-            "ClashScore"
+            "InteractionScore",
+            "ClashScore",
             
          ],
-        fixStereoFrom3D=True, # Turn false if your model directly output smiles
+        fixStereoFrom3D=args.fixStereoFrom3D, # Turn false if your model directly output smiles
     )
     evaluator.run(
         root_dir=args.data_path,
