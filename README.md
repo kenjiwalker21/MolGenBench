@@ -8,8 +8,9 @@
 # 🛠️ Environment Setup
 ```bash
 conda create --name MolGenBench python=3.11
-mamba install -c conda-forge rdkit numpy pandas seaborn scipy -y
+mamba install -c conda-forge numpy pandas seaborn scipy -y
 pip install --use-pep517 EFGs
+pip install rdkit==2025.9.1 prolif==2.0.3 mdanalysis==2.7.0
 pip install tqdm joblib
 pip install pytest
 pip install swifter
