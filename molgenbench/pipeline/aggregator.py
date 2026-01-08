@@ -19,7 +19,7 @@ class Aggregator:
             "Validity", "QED", "SA", "Uniqueness", "Diversity",
             "MotifDist", "ChemFilter",
             "PoseBuster", "StrainEnergy", "RMSD", "InteractionScore", "ClashScore",
-            "HitRediscover"
+            "HitRediscover","StrainEnergy_docked", "InteractionScore_docked", "ClashScore_docked"
         ]
         
         # Metric -> aggregation function mapping
@@ -34,9 +34,12 @@ class Aggregator:
             "ChemFilter": self._aggregate_chemfilter,
             "PoseBuster": self._aggregate_posebuster,
             "StrainEnergy": self._aggregate_strain_energy,
+            "StrainEnergy_docked": self._aggregate_strain_energy,
             "RMSD": self._aggregate_rmsd,
             "InteractionScore": self._aggregate_interaction_score,
+            "InteractionScore_docked": self._aggregate_interaction_score,
             "ClashScore": self._aggregate_clash_score,
+            "ClashScore_docked": self._aggregate_clash_score,
             "HitRediscover": self._aggregate_hit_rediscover,
         }
         
@@ -106,7 +109,7 @@ class Aggregator:
     # ========================== #
     #   Aggregation Methods
     # ========================== #
-    def _aggregate_validity(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_validity(self, df: pd.DataFrame, metric_name: str = "Validity") -> Dict[str, Any]:
         values_all = df[metric_name].sum() / 120000
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].sum() / 85000
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].sum() / 35000
@@ -117,7 +120,7 @@ class Aggregator:
             "unseen": {"Validity": values_unseen},
         }
     
-    def _aggregate_qed(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_qed(self, df: pd.DataFrame, metric_name: str = "QED") -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -128,7 +131,7 @@ class Aggregator:
             "unseen": {"QED": values_unseen},
         }
 
-    def _aggregate_sa(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_sa(self, df: pd.DataFrame, metric_name: str = "SA") -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -139,7 +142,7 @@ class Aggregator:
             "unseen": {"SA": values_unseen},
         }
 
-    def _aggregate_uniqueness(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_uniqueness(self, df: pd.DataFrame, metric_name: str = "Uniqueness") -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -150,7 +153,7 @@ class Aggregator:
             "unseen": {"Uniqueness": values_unseen},
         }
 
-    def _aggregate_diversity(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_diversity(self, df: pd.DataFrame, metric_name: str = "Diversity") -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -161,23 +164,23 @@ class Aggregator:
             "unseen": {"Diversity": values_unseen},
         }
     
-    def _aggregate_motif_dist(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_motif_dist(self, df: pd.DataFrame, metric_name: str = "MotifDist") -> Dict[str, Any]:
         result = {"all": {}, "seen": {}, "unseen": {}}
         
-        for subtype in ["Atom", "Ring", "Functional Group"]:
-            js_col = f"{subtype} Type JS"
+        for subtype in ["Atom Type", "Ring Type", "Functional Group"]:
+            js_col = f"{subtype} JS"
             if js_col in df.columns:
                 # Compute score as 1 - JS, then take mean
                 score_all = (1 - df[js_col]).mean()
                 score_seen = (1 - df[df['uniprot'].isin(uniprot_in_trainset)][js_col]).mean()
                 score_unseen = (1 - df[~df['uniprot'].isin(uniprot_in_trainset)][js_col]).mean()
                 
-                result["all"][f"{subtype}_Type_Score"] = score_all
-                result["seen"][f"{subtype}_Type_Score"] = score_seen
-                result["unseen"][f"{subtype}_Type_Score"] = score_unseen
+                result["all"][f"{subtype}_Score"] = score_all
+                result["seen"][f"{subtype}_Score"] = score_seen
+                result["unseen"][f"{subtype}_Score"] = score_unseen
         return result
         
-    def _aggregate_chemfilter(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_chemfilter(self, df: pd.DataFrame, metric_name: str = "ChemFilter") -> Dict[str, Any]:
         df_seen = df[df['uniprot'].isin(uniprot_in_trainset)]
         df_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)]
         
@@ -217,7 +220,7 @@ class Aggregator:
             },
         }
     
-    def _aggregate_posebuster(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_posebuster(self, df: pd.DataFrame, metric_name: str = "PoseBuster") -> Dict[str, Any]:
         """Aggregate PoseBuster metrics, compute pass rate for each sub-metric"""
         exclude_cols = ["id", "smiles", "uniprot", "series", "num_rotatable_bonds"]
         
@@ -332,7 +335,7 @@ class Aggregator:
             "unseen": {"ClashScore": values_unseen},
         }
     
-    def _aggregate_hit_rediscover(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+    def _aggregate_hit_rediscover(self, df: pd.DataFrame, metric_name: str = "HitRediscover") -> Dict[str, Any]:
         if self.mode == "De_novo_Results":
             return self._aggregate_hit_rediscover_denovo(df, metric_name)
         elif self.mode == "Hit_to_Lead_Results":
@@ -537,8 +540,7 @@ class Aggregator:
         """
         
         if metric_name in self.aggregation_map:
-            return self.aggregation_map[metric_name](df, metric_name)
-        
+            return self.aggregation_map[metric_name](df)
 
     def run(
         self,
@@ -563,7 +565,7 @@ class Aggregator:
         """
         # Step 0: Load reference interaction scores and reference SMILES/scaffolds
         self.mode = mode
-        if "InteractionScore" in self.metric_names:
+        if "InteractionScore" in self.metric_names or "InteractionScore_docked" in self.metric_names:
             self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
         self.ref_smiles, self.ref_scaffold = self.load_reference_smiles_and_scaffolds(root_dir)
         self.output_dir = os.path.dirname(output_path)

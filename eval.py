@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', choices=['De_novo_Results', 'Hit_to_Lead_Results'], default='De_novo_Results', help='Task mode')
     parser.add_argument('--model_name', type=str, required=True, help='Name of the generative model')
     parser.add_argument('--fixStereoFrom3D', action='store_true', help='Whether to fix stereochemistry from 3D structures')
+    parser.add_argument('--evaluateDocked', action='store_true', help='Whether to evaluate docked poses')
     args = parser.parse_args()
     
     evaluator = Evaluator(
@@ -34,6 +35,7 @@ if __name__ == "__main__":
             
          ],
         fixStereoFrom3D=args.fixStereoFrom3D, # Turn false if your model directly output smiles
+        evaluateDocked=args.evaluateDocked, # Turn true if you want to evaluate docked poses
     )
     evaluator.run(
         root_dir=args.data_path,
