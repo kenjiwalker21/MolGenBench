@@ -11,13 +11,10 @@ conda create --name MolGenBench python=3.11
 mamba install -c conda-forge numpy pandas seaborn scipy -y
 pip install --use-pep517 EFGs
 pip install rdkit==2025.9.1 prolif==2.0.3 mdanalysis==2.7.0
-pip install tqdm joblib
-pip install pytest
-pip install swifter
-pip install medchem
+pip install posebusters==0.3.1 spyrmsd
+pip install tqdm joblib pytest swifter medchem
 mamba install -c conda-forge lilly-medchem-rules
 mamba install openbabel
-pip install posebusters spyrmsd
 
 # for vina docking
 pip install meeko==0.1.dev3 scipy pdb2pqr vina
@@ -25,13 +22,6 @@ python -m pip install git+https://github.com/Valdes-Tresanco-MS/AutoDockTools_py
 
 # for posecheck evaluation
 pip install posecheck
-
-```
-
-# 🧪 Test the sample and Environment Setup
-```bash
-cd ~/MolGenBench
-pytest -q molgenbench/pytest/*
 ```
 
 # 📦 Datasets & Benchmark Results
@@ -111,6 +101,8 @@ Depending on your model type, use different inputs:
 - Protein pocket: `<UniprotID>_pocket10.pdb` or `<UniprotID>_prep.pdb`
 - Reference ligand pose for the specific series:
   `<UniprotID>_<SeriesID>_reference_ligand_pose_with_h.sdf`
+- **Conserved scaffold extraction for model input**:
+The conserved core scaffold is extracted using the corresponding scaffold SMARTS defined in top5_common_scaffold_info.csv for each series and provided as the input to the model. We provide a concrete example in get_h2l_scaf.py.
 
 ### **2. Ligand-based generation models**
 
@@ -130,8 +122,9 @@ evaluation pipeline provided in `eval.py`.
 python eval.py \
     --data_path "/path/to/data" \
     --round_name "Round1" \
-    --mode "De_novo_Results" \ or "Hit_to_Lead_Results"
-    --model_name "YOUR_MODEL_NAME"
+    --mode "De_novo_Results" \  # or "Hit_to_Lead_Results"
+    --model_name "YOUR_MODEL_NAME" \
+    --fixStereoFrom3D # close this if your model direct output smiles
 ```
 
 You can **comment out metrics in `eval.py` that you do not wish to compute.**
@@ -153,8 +146,8 @@ evaluator = Evaluator(
         # "PoseBuster", # comment out if 3D checks are not needed
         # "StrainEnergy",
         # "RMSD",
-        # "InteractionScore"
-        # "ClashScore"
+        # "InteractionScore",
+        # "ClashScore",
         
       ]
 )
