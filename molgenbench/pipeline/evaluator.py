@@ -19,8 +19,19 @@ class Evaluator:
     grouped by Uniprot or Series depending on task type.
     """
 
-    def __init__(self, metric_names: List[str] = None, fixStereoFrom3D: bool = True):
-        self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "PoseBuster", "StrainEnergy", "RMSD", "HitRediscover"]
+    def __init__(
+        self, 
+        metric_names: List[str] = None, 
+        fixStereoFrom3D: bool = True, 
+        evaluateDocked: bool = False
+    ):
+        self.evaluateDocked = evaluateDocked
+        
+        if self.evaluateDocked:
+            self.metric_names = [name for name in metric_names if name in ["StrainEnergy", "InteractionScore", "ClashScore"]]
+        else:
+            self.metric_names = metric_names
+            
         self.metric_map = {
             "Validity": ValidMetric(),
             "QED": QEDMetric(),
@@ -123,7 +134,11 @@ class Evaluator:
             df = pd.DataFrame(rows)
             if metric_name == "InteractionScore":
                 df = df.fillna(False)
-            out_path = os.path.join(save_dir, f"{metric_name}.csv")
+            
+            if self.evaluateDocked:
+                out_path = os.path.join(save_dir, f"{metric_name}_docked.csv")
+            else:
+                out_path = os.path.join(save_dir, f"{metric_name}.csv")
             df.to_csv(out_path, index=False)
 
         # 4️⃣ 保存 dataset-level
@@ -139,7 +154,10 @@ class Evaluator:
         if not os.path.exists(results_dir):
             return False
         for metric_name in self.metric_names:
-            csv_path = os.path.join(results_dir, f"{metric_name}.csv")
+            if self.evaluateDocked:
+                csv_path = os.path.join(results_dir, f"{metric_name}_docked.csv")
+            else:
+                csv_path = os.path.join(results_dir, f"{metric_name}.csv")
             if not os.path.exists(csv_path):
                 return False
         return True
@@ -180,7 +198,11 @@ class Evaluator:
         ref_active_path = os.path.join(root_dir, uniprot, "reference_active_molecules", f"{uniprot}_reference_active_molecules.sdf")
 
         if mode == "De_novo_Results":
-            sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
+            if not self.evaluateDocked:
+                sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
+            else:
+                sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}_vina_docked.sdf")
+            
             if not os.path.exists(sdf_path):
                 return
             
@@ -188,11 +210,12 @@ class Evaluator:
             if skip_existing and self._check_metrics_exist(results_dir):
                 return
             
-            docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
             records = read_sdf_to_records(
                 uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path
             )
-            records = attach_docked_molecules(records, docked_path)
+            if not self.evaluateDocked:
+                docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
+                records = attach_docked_molecules(records, docked_path)
             
             records = self.evaluate_molecule_metrics(records)
             dataset_results = self.evaluate_dataset_metrics(records)
@@ -206,7 +229,12 @@ class Evaluator:
                 return
             for series_id in os.listdir(uniprot_path):
                 series_path = os.path.join(uniprot_path, series_id)
-                sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
+                
+                if not self.evaluateDocked:
+                    sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
+                else:
+                    sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}_vina_docked.sdf")
+                
                 if not os.path.exists(sdf_path):
                     continue
                 
@@ -220,11 +248,12 @@ class Evaluator:
                 if skip_existing and self._check_metrics_exist(results_dir):
                     continue
                 
-                docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
                 records = read_sdf_to_records(
                     uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path
                 )
-                records = attach_docked_molecules(records, docked_path)
+                if not self.evaluateDocked:
+                    docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
+                    records = attach_docked_molecules(records, docked_path)
                 
                 records = self.evaluate_molecule_metrics(records)
                 dataset_results = self.evaluate_dataset_metrics(records)

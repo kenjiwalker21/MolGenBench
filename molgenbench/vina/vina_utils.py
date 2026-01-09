@@ -10,6 +10,7 @@ import multiprocessing as mp
 import AutoDockTools
 from joblib import Parallel, delayed
 from rdkit import Chem
+from rdkit.Chem import Lipinski
 from vina import Vina
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
@@ -402,6 +403,7 @@ def process_ligand(ligand_file, ligand_root, protein_path, ref_ligand_mol, docke
         'protein_path': protein_path,
         'ligand_path': os.path.join(ligand_root, ligand_file),
         'ligand_mol': ligprep_simple(ligand_mol),
+        'num_rotatable_bonds': Lipinski.NumRotatableBonds(ligand_mol),
         'ref_ligand_mol': ref_ligand_mol,
         'docked_root': docked_root,
         'affinity': None,  # Placeholder for vina_dock results
@@ -420,6 +422,7 @@ def prepare_output_df(protein_path, ligand_root, ref_ligand_mol, docked_root):
     )
     
     output_df = pd.DataFrame(rows)
+    output_df = output_df[output_df['num_rotatable_bonds'] < 15]
     return output_df
 
 

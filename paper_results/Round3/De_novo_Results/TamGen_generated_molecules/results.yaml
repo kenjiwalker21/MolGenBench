@@ -1,0 +1,146 @@
+model_name: TamGen_generated_molecules
+round: Round3
+mode: De_novo_Results
+metrics:
+  Validity:
+    all:
+      Validity: 0.9963916666666667
+    seen:
+      Validity: 0.9964470588235295
+    unseen:
+      Validity: 0.9962571428571428
+  QED:
+    all:
+      QED: 0.5739017071282206
+    seen:
+      QED: 0.5708596438646666
+    unseen:
+      QED: 0.5812909833993071
+  SA:
+    all:
+      SA: 0.7638765712947553
+    seen:
+      SA: 0.7601930387966658
+    unseen:
+      SA: 0.7728239983939889
+  Uniqueness:
+    all:
+      Uniqueness: 0.2624558253697166
+    seen:
+      Uniqueness: 0.2649089042031106
+    unseen:
+      Uniqueness: 0.2564983482029026
+  Diversity:
+    all:
+      Diversity: 0.8431037472380373
+    seen:
+      Diversity: 0.8456467186269414
+    unseen:
+      Diversity: 0.8369279595792691
+  MotifDist:
+    all:
+      Atom Type_Score: 0.8778082699049314
+      Ring Type_Score: 0.8801558221511904
+      Functional Group_Score: 0.6065772138464711
+    seen:
+      Atom Type_Score: 0.8851851488498614
+      Ring Type_Score: 0.8777197420793683
+      Functional Group_Score: 0.6171482982659517
+    unseen:
+      Atom Type_Score: 0.8598929924672442
+      Ring Type_Score: 0.8860720166113296
+      Functional Group_Score: 0.5809045802563041
+  ChemFilter:
+    all:
+      smiles_pass_rate: 0.6312583333333334
+      scaffold_pass_rate: 0.09578333333333333
+    seen:
+      smiles_pass_rate: 0.6179294117647058
+      scaffold_pass_rate: 0.09894117647058824
+    unseen:
+      smiles_pass_rate: 0.6636285714285715
+      scaffold_pass_rate: 0.08811428571428571
+  HitRediscover:
+    all:
+      smiles_hit_recovery: 33.0
+      smiles_hit_recovery_not_in_trainset: 18.0
+      smiles_hit_rate: 0.0008083333333333333
+      smiles_hit_rate_not_in_trainset: 0.00028333333333333335
+      smiles_hit_fraction: 0.0004818756648323711
+      smiles_hit_fraction_not_in_trainset: 0.0001965347367976049
+      smiles_TAScore_0-1_count: 87.0
+      smiles_TAScore_1-10_count: 12.0
+      smiles_TAScore_10-100_count: 15.0
+      smiles_TAScore_>100_count: 6.0
+      scaffold_hit_recovery: 104.0
+      scaffold_hit_recovery_not_in_trainset: 96.0
+      scaffold_hit_rate: 0.029141666666666666
+      scaffold_hit_rate_not_in_trainset: 0.023000000000000003
+      scaffold_hit_fraction: 0.0063160863159633105
+      scaffold_hit_fraction_not_in_trainset: 0.005090872020105241
+      scaffold_TAScore_0-1_count: 77.0
+      scaffold_TAScore_1-10_count: 43.0
+      scaffold_TAScore_10-100_count: 0.0
+      scaffold_TAScore_>100_count: 0.0
+    seen:
+      smiles_hit_recovery: 31.0
+      smiles_hit_recovery_not_in_trainset: 16.0
+      smiles_hit_rate: 0.0010823529411764705
+      smiles_hit_rate_not_in_trainset: 0.00034117647058823537
+      smiles_hit_fraction: 0.0005919474886956659
+      smiles_hit_fraction_not_in_trainset: 0.00018911323735246654
+      smiles_TAScore_0-1_count: 54.0
+      smiles_TAScore_1-10_count: 12.0
+      smiles_TAScore_10-100_count: 13.0
+      smiles_TAScore_>100_count: 6.0
+      scaffold_hit_recovery: 71.0
+      scaffold_hit_recovery_not_in_trainset: 63.0
+      scaffold_hit_rate: 0.024917647058823527
+      scaffold_hit_rate_not_in_trainset: 0.01624705882352941
+      scaffold_hit_fraction: 0.006112088052378942
+      scaffold_hit_fraction_not_in_trainset: 0.004382373752344021
+      scaffold_TAScore_0-1_count: 56.0
+      scaffold_TAScore_1-10_count: 29.0
+      scaffold_TAScore_10-100_count: 0.0
+      scaffold_TAScore_>100_count: 0.0
+    unseen:
+      smiles_hit_recovery: 2.0
+      smiles_hit_recovery_not_in_trainset: 2.0
+      smiles_hit_rate: 0.00014285714285714287
+      smiles_hit_rate_not_in_trainset: 0.00014285714285714287
+      smiles_hit_fraction: 0.00021455837830722656
+      smiles_hit_fraction_not_in_trainset: 0.00021455837830722656
+      smiles_TAScore_0-1_count: 33.0
+      smiles_TAScore_1-10_count: 0.0
+      smiles_TAScore_10-100_count: 2.0
+      smiles_TAScore_>100_count: 0.0
+      scaffold_hit_recovery: 33.0
+      scaffold_hit_recovery_not_in_trainset: 33.0
+      scaffold_hit_rate: 0.0394
+      scaffold_hit_rate_not_in_trainset: 0.0394
+      scaffold_hit_fraction: 0.006811510670382488
+      scaffold_hit_fraction_not_in_trainset: 0.006811510670382488
+      scaffold_TAScore_0-1_count: 21.0
+      scaffold_TAScore_1-10_count: 14.0
+      scaffold_TAScore_10-100_count: 0.0
+      scaffold_TAScore_>100_count: 0.0
+  InteractionScore_docked:
+    all:
+      InteractionScore>p25: 0.4757613843838546
+      InteractionScore>p50: 0.2732409043655564
+      InteractionScore>p75: 0.10247304902292005
+    seen:
+      InteractionScore>p25: 0.4933060167783519
+      InteractionScore>p50: 0.2932666993826723
+      InteractionScore>p75: 0.11419003773726003
+    unseen:
+      InteractionScore>p25: 0.4331529914257895
+      InteractionScore>p50: 0.2246068307525608
+      InteractionScore>p75: 0.07401750500238011
+  ClashScore_docked:
+    all:
+      ClashScore: 6.518544268486331
+    seen:
+      ClashScore: 7.028909042281602
+    unseen:
+      ClashScore: 5.292697170555085

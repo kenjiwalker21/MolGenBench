@@ -108,7 +108,7 @@ class ClashScoreMetric(Metric):
         if not is_valid(mol):
             return False
         
-        if mol.GetNumAtoms() > 0 and not np.isnan(mol.GetConformer().GetPositions()).any():
+        if mol.GetNumAtoms() > 0 and not np.isnan(mol.GetConformer().GetPositions()).any() and Lipinski.NumRotatableBonds(mol) < 15:
             return True
         else:
             return False
@@ -153,6 +153,19 @@ class RMSDMetric(Metric):
     """
 
     name = "RMSD"
+    
+    def _filterMol(self, record: MoleculeRecord) -> bool:
+        """Filter molecule based on conformer."""
+        mol_ref = record.rdkit_mol
+        mol_pred = record.metadata.get("docked_mol", None)
+        
+        if mol_pred is None or mol_ref is None:
+            return False
+        
+        if Lipinski.NumRotatableBonds(mol_ref) >= 15:
+            return False
+        
+        return True
 
     def _symmetry_rmsd(self, mol_pred: Chem.Mol, mol_ref: Chem.Mol) -> float:
         """Compute symmetry-corrected RMSD using spyrmsd."""
@@ -169,7 +182,7 @@ class RMSDMetric(Metric):
             )
         except Exception as e:
             print(f"[RMSDMetric] Symmetry RMSD failed: {e}")
-            return np.nan
+            return None
 
     def compute(self, record: MoleculeRecord) -> Dict[str, Any]:
         """
@@ -181,12 +194,14 @@ class RMSDMetric(Metric):
         Returns:
             dict: { "RMSD": value }
         """
+        
+        if not self._filterMol(record):
+            record.metadata[self.name] = None
+            return None
+
         mol_ref = record.rdkit_mol
         mol_pred = record.metadata.get("docked_mol", None)
-        if mol_pred is None or mol_ref is None:
-            record.metadata[self.name] = np.nan
-            return np.nan
-
+        
         # Try symmetry RMSD first, fall back if needed
         rmsd_val = self._symmetry_rmsd(mol_pred, mol_ref)
 
