@@ -1,0 +1,230 @@
+model_name: shepherd_x1x3x4_mosesaq_submission_Hit_to_Lead
+round: Round3
+mode: Hit_to_Lead_Results
+metrics:
+  Validity:
+    all:
+      Validity: 0.5212
+    seen:
+      Validity: 0.5266588235294117
+    unseen:
+      Validity: 0.5079428571428571
+  QED:
+    all:
+      QED: 0.5676161033591807
+    seen:
+      QED: 0.5696396699251406
+    unseen:
+      QED: 0.5625206493771936
+  SA:
+    all:
+      SA: 0.6293176004093117
+    seen:
+      SA: 0.6311055265156593
+    unseen:
+      SA: 0.6248155023062213
+  Uniqueness:
+    all:
+      Uniqueness: 0.9879945090981826
+    seen:
+      Uniqueness: 0.9873449514183925
+    unseen:
+      Uniqueness: 0.9895460240133377
+  Diversity:
+    all:
+      Diversity: 0.8562205078789094
+    seen:
+      Diversity: 0.8540264516383658
+    unseen:
+      Diversity: 0.8614611679277502
+  MotifDist:
+    all:
+      Atom Type_Score: 0.8793989170952833
+      Ring Type_Score: 0.7578544530517602
+      Functional Group_Score: 0.5518616200282851
+    seen:
+      Atom Type_Score: 0.8772272184742853
+      Ring Type_Score: 0.7521742804980726
+      Functional Group_Score: 0.5463106803965029
+    unseen:
+      Atom Type_Score: 0.8845861743728671
+      Ring Type_Score: 0.771421950922854
+      Functional Group_Score: 0.565120435834485
+  ChemFilter:
+    all:
+      smiles_pass_rate: 0.18429166666666666
+      scaffold_pass_rate: 0.16863333333333333
+    seen:
+      smiles_pass_rate: 0.1887294117647059
+      scaffold_pass_rate: 0.17163529411764705
+    unseen:
+      smiles_pass_rate: 0.1735142857142857
+      scaffold_pass_rate: 0.16134285714285715
+  PoseBuster:
+    all:
+      mol_pred_loaded: 0.5222583333333334
+      mol_cond_loaded: 0.5222583333333334
+      sanitization: 0.5222583333333334
+      inchi_convertible: 0.517075
+      all_atoms_connected: 0.5222583333333334
+      bond_lengths: 0.49866666666666665
+      bond_angles: 0.416575
+      internal_steric_clash: 0.51775
+      aromatic_ring_flatness: 0.52215
+      double_bond_flatness: 0.5088916666666666
+      internal_energy: 0.45565833333333333
+      protein-ligand_maximum_distance: 0.5222583333333334
+      minimum_distance_to_protein: 0.39755
+      minimum_distance_to_organic_cofactors: 0.5222583333333334
+      minimum_distance_to_inorganic_cofactors: 0.5222583333333334
+      minimum_distance_to_waters: 0.5222583333333334
+      volume_overlap_with_protein: 0.5221916666666667
+      volume_overlap_with_organic_cofactors: 0.5222583333333334
+      volume_overlap_with_inorganic_cofactors: 0.5222583333333334
+      volume_overlap_with_waters: 0.5222583333333334
+      pass_all: 0.29058333333333336
+    seen:
+      mol_pred_loaded: 0.5279176470588235
+      mol_cond_loaded: 0.5279176470588235
+      sanitization: 0.5279176470588235
+      inchi_convertible: 0.5224
+      all_atoms_connected: 0.5279176470588235
+      bond_lengths: 0.5045176470588235
+      bond_angles: 0.42269411764705883
+      internal_steric_clash: 0.524
+      aromatic_ring_flatness: 0.5278117647058823
+      double_bond_flatness: 0.5141411764705882
+      internal_energy: 0.46208235294117644
+      protein-ligand_maximum_distance: 0.5279176470588235
+      minimum_distance_to_protein: 0.3996
+      minimum_distance_to_organic_cofactors: 0.5279176470588235
+      minimum_distance_to_inorganic_cofactors: 0.5279176470588235
+      minimum_distance_to_waters: 0.5279176470588235
+      volume_overlap_with_protein: 0.5278470588235294
+      volume_overlap_with_organic_cofactors: 0.5279176470588235
+      volume_overlap_with_inorganic_cofactors: 0.5279176470588235
+      volume_overlap_with_waters: 0.5279176470588235
+      pass_all: 0.293
+    unseen:
+      mol_pred_loaded: 0.5085142857142857
+      mol_cond_loaded: 0.5085142857142857
+      sanitization: 0.5085142857142857
+      inchi_convertible: 0.5041428571428571
+      all_atoms_connected: 0.5085142857142857
+      bond_lengths: 0.48445714285714286
+      bond_angles: 0.4017142857142857
+      internal_steric_clash: 0.5025714285714286
+      aromatic_ring_flatness: 0.5084
+      double_bond_flatness: 0.49614285714285716
+      internal_energy: 0.44005714285714287
+      protein-ligand_maximum_distance: 0.5085142857142857
+      minimum_distance_to_protein: 0.39257142857142857
+      minimum_distance_to_organic_cofactors: 0.5085142857142857
+      minimum_distance_to_inorganic_cofactors: 0.5085142857142857
+      minimum_distance_to_waters: 0.5085142857142857
+      volume_overlap_with_protein: 0.5084571428571428
+      volume_overlap_with_organic_cofactors: 0.5085142857142857
+      volume_overlap_with_inorganic_cofactors: 0.5085142857142857
+      volume_overlap_with_waters: 0.5085142857142857
+      pass_all: 0.2847142857142857
+  StrainEnergy:
+    all:
+      StrainEnergy25%: 80.77
+      StrainEnergy50%: 138.73000000000002
+      StrainEnergy75%: 312.14
+    seen:
+      StrainEnergy25%: 81.29000000000002
+      StrainEnergy50%: 138.64
+      StrainEnergy75%: 305.65
+    unseen:
+      StrainEnergy25%: 79.34
+      StrainEnergy50%: 139.005
+      StrainEnergy75%: 332.72999999999996
+  RMSD:
+    all:
+      RMSD_<2: 0.12090384615384615
+    seen:
+      RMSD_<2: 0.1264349318742624
+    unseen:
+      RMSD_<2: 0.1068904593639576
+  InteractionScore:
+    all:
+      InteractionScore>p25: 0.42640985288462957
+      InteractionScore>p50: 0.23485603273368624
+      InteractionScore>p75: 0.08569594515319155
+    seen:
+      InteractionScore>p25: 0.4296586857611861
+      InteractionScore>p50: 0.2309196669267004
+      InteractionScore>p75: 0.086426897523723
+    unseen:
+      InteractionScore>p25: 0.41851983018442146
+      InteractionScore>p50: 0.24441577826493766
+      InteractionScore>p75: 0.08392077511047231
+  ClashScore:
+    all:
+      ClashScore: 9.664370318618293
+    seen:
+      ClashScore: 9.811329736591558
+    unseen:
+      ClashScore: 9.292491252222796
+  HitRediscover:
+    all:
+      smiles_hit_recovery: 24.0
+      smiles_hit_rate: 0.00022765598650927488
+      smiles_hit_fraction: 0.0016338002178375713
+      scaffold_hit_recovery: 81.0
+      scaffold_hit_rate: 0.004342327150084317
+      scaffold_hit_fraction: 0.03387613391070776
+      smiles_hit_num: 27.0
+      Mean_normalized_affinity: 0.4923852616241074
+    seen:
+      smiles_hit_recovery: 22.0
+      smiles_hit_rate: 0.0002990430622009569
+      smiles_hit_fraction: 0.0021620035376973966
+      scaffold_hit_recovery: 66.0
+      scaffold_hit_rate: 0.005442583732057417
+      scaffold_hit_fraction: 0.03533313196994179
+      smiles_hit_num: 25.0
+      Mean_normalized_affinity: 0.4914813827372238
+    unseen:
+      smiles_hit_recovery: 2.0
+      smiles_hit_rate: 5.714285714285714e-05
+      smiles_hit_fraction: 0.00037214885954381746
+      scaffold_hit_recovery: 15.0
+      scaffold_hit_rate: 0.0017142857142857142
+      scaffold_hit_fraction: 0.030395989974937348
+      smiles_hit_num: 2.0
+      Mean_normalized_affinity: 0.5036837477101516
+  StrainEnergy_docked:
+    all:
+      StrainEnergy25%: 74.25
+      StrainEnergy50%: 150.95999999999998
+      StrainEnergy75%: 311.075
+    seen:
+      StrainEnergy25%: 75.32
+      StrainEnergy50%: 151.47
+      StrainEnergy75%: 308.8725
+    unseen:
+      StrainEnergy25%: 71.4325
+      StrainEnergy50%: 149.37
+      StrainEnergy75%: 315.865
+  InteractionScore_docked:
+    all:
+      InteractionScore>p25: 0.4583162702491733
+      InteractionScore>p50: 0.26280036140342783
+      InteractionScore>p75: 0.09678636672629021
+    seen:
+      InteractionScore>p25: 0.46870335993791334
+      InteractionScore>p50: 0.2678074402737935
+      InteractionScore>p75: 0.10595462431338167
+    unseen:
+      InteractionScore>p25: 0.4330904810050906
+      InteractionScore>p50: 0.250640312718254
+      InteractionScore>p75: 0.07452059830049666
+  ClashScore_docked:
+    all:
+      ClashScore: 7.499273842181701
+    seen:
+      ClashScore: 7.6039274546591615
+    unseen:
+      ClashScore: 7.23446005823522

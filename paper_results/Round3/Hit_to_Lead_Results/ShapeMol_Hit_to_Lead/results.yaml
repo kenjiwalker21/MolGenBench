@@ -1,0 +1,136 @@
+model_name: ShapeMol_Hit_to_Lead
+round: Round3
+mode: Hit_to_Lead_Results
+metrics:
+  Validity:
+    all:
+      Validity: 0.9517916666666667
+    seen:
+      Validity: 0.9608235294117647
+    unseen:
+      Validity: 0.9298571428571428
+  QED:
+    all:
+      QED: 0.5979483053619409
+    seen:
+      QED: 0.5948856468984799
+    unseen:
+      QED: 0.6056338889142798
+  SA:
+    all:
+      SA: 0.4464469640590116
+    seen:
+      SA: 0.44353716174850005
+    unseen:
+      SA: 0.45374896297434325
+  Uniqueness:
+    all:
+      Uniqueness: 1.0
+    seen:
+      Uniqueness: 1.0
+    unseen:
+      Uniqueness: 1.0
+  Diversity:
+    all:
+      Diversity: 0.8901373262250231
+    seen:
+      Diversity: 0.8899291745576613
+    unseen:
+      Diversity: 0.8906416479790885
+  MotifDist:
+    all:
+      Atom Type_Score: 0.8885407799860556
+      Ring Type_Score: 0.7236470264438511
+      Functional Group_Score: 0.562621772640633
+    seen:
+      Atom Type_Score: 0.8852533259017097
+      Ring Type_Score: 0.7208316014579363
+      Functional Group_Score: 0.5588523856667743
+    unseen:
+      Atom Type_Score: 0.8965058115961282
+      Ring Type_Score: 0.7304683989811531
+      Functional Group_Score: 0.571754458794439
+  ChemFilter:
+    all:
+      smiles_pass_rate: 0.22191666666666668
+      scaffold_pass_rate: 0.22104166666666666
+    seen:
+      smiles_pass_rate: 0.21962352941176472
+      scaffold_pass_rate: 0.21915294117647058
+    unseen:
+      smiles_pass_rate: 0.2274857142857143
+      scaffold_pass_rate: 0.22562857142857143
+  StrainEnergy:
+    all:
+      StrainEnergy25%: 699.625
+      StrainEnergy50%: 248676.38
+      StrainEnergy75%: 124912065.66499999
+    seen:
+      StrainEnergy25%: 726.5600000000001
+      StrainEnergy50%: 261222.71
+      StrainEnergy75%: 130778879.6
+    unseen:
+      StrainEnergy25%: 634.275
+      StrainEnergy50%: 218845.8
+      StrainEnergy75%: 111280977.03999999
+  HitRediscover:
+    all:
+      smiles_hit_recovery: 0.0
+      smiles_hit_rate: 0.0
+      smiles_hit_fraction: 0.0
+      scaffold_hit_recovery: 11.0
+      scaffold_hit_rate: 0.00021702838063439065
+      scaffold_hit_fraction: 0.002930281673839778
+      smiles_hit_num: 0.0
+      Mean_normalized_affinity: 0.0
+    seen:
+      smiles_hit_recovery: 0.0
+      smiles_hit_rate: 0.0
+      smiles_hit_fraction: 0.0
+      scaffold_hit_recovery: 8.0
+      scaffold_hit_rate: 0.0002240566037735849
+      scaffold_hit_fraction: 0.0022725756036871703
+      smiles_hit_num: 0.0
+      Mean_normalized_affinity: 0.0
+    unseen:
+      smiles_hit_recovery: 0.0
+      smiles_hit_rate: 0.0
+      smiles_hit_fraction: 0.0
+      scaffold_hit_recovery: 3.0
+      scaffold_hit_rate: 0.00019999999999999998
+      scaffold_hit_fraction: 0.004523809523809524
+      smiles_hit_num: 0.0
+      Mean_normalized_affinity: 0.0
+  StrainEnergy_docked:
+    all:
+      StrainEnergy25%: 79.825
+      StrainEnergy50%: 150.37
+      StrainEnergy75%: 299.97
+    seen:
+      StrainEnergy25%: 80.45999999999998
+      StrainEnergy50%: 151.25
+      StrainEnergy75%: 304.07000000000005
+    unseen:
+      StrainEnergy25%: 77.8775
+      StrainEnergy50%: 148.11
+      StrainEnergy75%: 289.91249999999997
+  InteractionScore_docked:
+    all:
+      InteractionScore>p25: 0.2654414260031063
+      InteractionScore>p50: 0.1279290351951708
+      InteractionScore>p75: 0.03409103064290786
+    seen:
+      InteractionScore>p25: 0.27736440981178573
+      InteractionScore>p50: 0.13348009160618246
+      InteractionScore>p75: 0.04013146746985815
+    unseen:
+      InteractionScore>p25: 0.23648560818202757
+      InteractionScore>p50: 0.11444789819699966
+      InteractionScore>p75: 0.01942139834888571
+  ClashScore_docked:
+    all:
+      ClashScore: 12.44577613289151
+    seen:
+      ClashScore: 12.63268200678989
+    unseen:
+      ClashScore: 11.981366925355228

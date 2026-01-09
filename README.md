@@ -3,6 +3,8 @@
 ![MolGenBench overview](./FigShow/MolGenBench.svg "Overview of MolGenBench pipeline")
 
 ## 🔔 News
+[2026-01-09] We have released Version 3 of the [dataset](https://zenodo.org/records/18183463). In this release, we added pre-computed evaluation CSV results to each results folder. We also uploaded the aggregated results under the `paper_results` folder in the repository.
+
 [2025-12-12] We have released Version 2 of the [dataset](https://zenodo.org/records/17890389). Compared with Version 1, this update additionally includes precomputed InChI and SMILES for active molecules, which significantly accelerates the HitRediscovery calculation.
 
 # 🛠️ Environment Setup
@@ -25,7 +27,7 @@ pip install posecheck
 ```
 
 # 📦 Datasets & Benchmark Results
-Please download from [Zenodo dataset](https://zenodo.org/records/17890389) the result on your device and unzip the files. The downloaded dataset already follows the required folder structure, so you can directly use it for evaluation without any reorganization.
+Please download from [Zenodo dataset](https://zenodo.org/records/18183463) the result on your device and unzip the files. The downloaded dataset already follows the required folder structure, so you can directly use it for evaluation without any reorganization.
 
 # 📁 Required Directory Structure
 
