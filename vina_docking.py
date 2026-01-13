@@ -133,6 +133,8 @@ def merge_sdf_folder(input_dir: str, output_sdf_path: str):
     Merge all SDF files under `input_dir` into a single output file.
     Skips invalid or unreadable molecules.
     """
+    if not os.path.exists(input_dir):
+        return
     writer = Chem.SDWriter(output_sdf_path)
     for sdf_file in os.listdir(input_dir):
         if not sdf_file.endswith('.sdf'):
