@@ -48,6 +48,13 @@ def process_sdf_group(
         logger.warning(f"{input_sdf_path} not found, skipping...")
         return None
 
+    try:
+        Chem.SDMolSupplier(input_sdf_path)
+    except Exception as e:
+        logger.error(f"Failed to read {input_sdf_path}: {e}")
+        return None    
+    
+
     tmp_ligand_root = os.path.join(output_root, f'{model_name}_tmp_split')
     docked_root = os.path.join(output_root, f'{model_name}_vinadocked_output')
     os.makedirs(docked_root, exist_ok=True)
@@ -133,6 +140,8 @@ def merge_sdf_folder(input_dir: str, output_sdf_path: str):
     Merge all SDF files under `input_dir` into a single output file.
     Skips invalid or unreadable molecules.
     """
+    if not os.path.exists(input_dir):
+        return
     writer = Chem.SDWriter(output_sdf_path)
     for sdf_file in os.listdir(input_dir):
         if not sdf_file.endswith('.sdf'):
