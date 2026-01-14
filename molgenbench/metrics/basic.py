@@ -80,12 +80,12 @@ class ChemFilterMetric(Metric):
         nibr_filter = NIBRFilters()
         lilly_filter = LillyDemeritsFilters()
 
-        results_common = common_filter([Chem.MolToSmiles(mol)])
-        results_nibr = nibr_filter([Chem.MolToSmiles(mol)])
-        results_lilly = lilly_filter([Chem.MolToSmiles(mol)])
+        results_common = common_filter([Chem.MolToSmiles(mol)])['pass_filter'].iloc[0]
+        results_nibr = nibr_filter([Chem.MolToSmiles(mol)])['pass_filter'].iloc[0]
+        results_lilly = lilly_filter([Chem.MolToSmiles(mol)])['pass_filter'].iloc[0]
         results_RO5 = self.obey_lipinski(mol) == 5
         
-        pass_all = all([results_common[0], results_nibr[0], results_lilly[0], results_RO5])
+        pass_all = all([results_common, results_nibr, results_lilly, results_RO5])
         
         return pass_all
 
