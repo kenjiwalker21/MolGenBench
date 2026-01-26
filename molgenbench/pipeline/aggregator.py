@@ -442,12 +442,14 @@ class Aggregator:
             n_ref_scaffolds = ref_smiles_scaffold_unique_count_denovo[uniprot + "_scaffold"]
             
             # Target Aware Score calculations
-            smiles_intersection_specific = unique_smiles_hits / group['gen_smiles'].nunique()
-            smiles_intersection_all = len(set(self.ref_smiles[uniprot]).intersection(set(df['gen_smiles']))) / df['gen_smiles'].nunique()
+            ref_smiles = set(self.ref_smiles[uniprot])
+            smiles_intersection_specific = len(ref_smiles.intersection(set(group['gen_smiles']))) / group['gen_smiles'].nunique()
+            smiles_intersection_all = len(ref_smiles.intersection(set(df['gen_smiles']))) / df['gen_smiles'].nunique()
             smiles_target_aware_score = smiles_intersection_specific / (smiles_intersection_all + 1e-10)
             
-            scaffold_intersection_specific = unique_scaffold_hits_to_smiles / group['gen_smiles'].nunique()
-            all_intersection_scaffold = set(self.ref_scaffold[uniprot]).intersection(set(df['gen_scaffold']))
+            ref_scaffold = set(self.ref_scaffold[uniprot])
+            scaffold_intersection_specific = group[group['gen_scaffold'].isin(ref_scaffold)]['gen_smiles'].nunique() / group['gen_smiles'].nunique()
+            all_intersection_scaffold = ref_scaffold.intersection(set(df['gen_scaffold']))
             # Build dict only for intersection scaffolds
             gen_all_scaffold_to_smiles = df.groupby('gen_scaffold')['gen_smiles'].apply(set).to_dict()
             find_scaffold_to_smiles = set()
