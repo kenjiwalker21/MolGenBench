@@ -68,10 +68,10 @@ metrics:
       smiles_hit_rate_not_in_trainset: 0.0004666666666666667
       smiles_hit_fraction: 0.0006186880836789084
       smiles_hit_fraction_not_in_trainset: 0.000281178482071217
-      smiles_TAScore_0-1_count: 82.0
-      smiles_TAScore_1-10_count: 11.0
-      smiles_TAScore_10-100_count: 18.0
-      smiles_TAScore_>100_count: 9.0
+      smiles_TAScore_0-1_count: 97.0
+      smiles_TAScore_1-10_count: 13.0
+      smiles_TAScore_10-100_count: 10.0
+      smiles_TAScore_>100_count: 0.0
       scaffold_hit_recovery: 102.0
       scaffold_hit_recovery_not_in_trainset: 93.0
       scaffold_hit_rate: 0.02611666666666667
@@ -89,10 +89,10 @@ metrics:
       smiles_hit_rate_not_in_trainset: 0.0005058823529411765
       smiles_hit_fraction: 0.0007377618064443399
       smiles_hit_fraction_not_in_trainset: 0.0002612776629981875
-      smiles_TAScore_0-1_count: 55.0
-      smiles_TAScore_1-10_count: 10.0
-      smiles_TAScore_10-100_count: 14.0
-      smiles_TAScore_>100_count: 6.0
+      smiles_TAScore_0-1_count: 66.0
+      smiles_TAScore_1-10_count: 11.0
+      smiles_TAScore_10-100_count: 8.0
+      smiles_TAScore_>100_count: 0.0
       scaffold_hit_recovery: 68.0
       scaffold_hit_recovery_not_in_trainset: 59.0
       scaffold_hit_rate: 0.022705882352941176
@@ -110,10 +110,10 @@ metrics:
       smiles_hit_rate_not_in_trainset: 0.00037142857142857143
       smiles_hit_fraction: 0.00032950904267714585
       smiles_hit_fraction_not_in_trainset: 0.00032950904267714585
-      smiles_TAScore_0-1_count: 27.0
-      smiles_TAScore_1-10_count: 1.0
-      smiles_TAScore_10-100_count: 4.0
-      smiles_TAScore_>100_count: 3.0
+      smiles_TAScore_0-1_count: 31.0
+      smiles_TAScore_1-10_count: 2.0
+      smiles_TAScore_10-100_count: 2.0
+      smiles_TAScore_>100_count: 0.0
       scaffold_hit_recovery: 34.0
       scaffold_hit_recovery_not_in_trainset: 34.0
       scaffold_hit_rate: 0.03440000000000001

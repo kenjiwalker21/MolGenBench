@@ -68,18 +68,18 @@ metrics:
       smiles_hit_rate_not_in_trainset: 0.00028333333333333335
       smiles_hit_fraction: 0.0004818756648323711
       smiles_hit_fraction_not_in_trainset: 0.0001965347367976049
-      smiles_TAScore_0-1_count: 87.0
-      smiles_TAScore_1-10_count: 12.0
-      smiles_TAScore_10-100_count: 15.0
-      smiles_TAScore_>100_count: 6.0
+      smiles_TAScore_0-1_count: 100.0
+      smiles_TAScore_1-10_count: 13.0
+      smiles_TAScore_10-100_count: 7.0
+      smiles_TAScore_>100_count: 0.0
       scaffold_hit_recovery: 104.0
       scaffold_hit_recovery_not_in_trainset: 96.0
       scaffold_hit_rate: 0.029141666666666666
       scaffold_hit_rate_not_in_trainset: 0.023000000000000003
       scaffold_hit_fraction: 0.0063160863159633105
       scaffold_hit_fraction_not_in_trainset: 0.005090872020105241
-      scaffold_TAScore_0-1_count: 77.0
-      scaffold_TAScore_1-10_count: 43.0
+      scaffold_TAScore_0-1_count: 78.0
+      scaffold_TAScore_1-10_count: 42.0
       scaffold_TAScore_10-100_count: 0.0
       scaffold_TAScore_>100_count: 0.0
     seen:
@@ -89,18 +89,18 @@ metrics:
       smiles_hit_rate_not_in_trainset: 0.00034117647058823537
       smiles_hit_fraction: 0.0005919474886956659
       smiles_hit_fraction_not_in_trainset: 0.00018911323735246654
-      smiles_TAScore_0-1_count: 54.0
+      smiles_TAScore_0-1_count: 67.0
       smiles_TAScore_1-10_count: 12.0
-      smiles_TAScore_10-100_count: 13.0
-      smiles_TAScore_>100_count: 6.0
+      smiles_TAScore_10-100_count: 6.0
+      smiles_TAScore_>100_count: 0.0
       scaffold_hit_recovery: 71.0
       scaffold_hit_recovery_not_in_trainset: 63.0
       scaffold_hit_rate: 0.024917647058823527
       scaffold_hit_rate_not_in_trainset: 0.01624705882352941
       scaffold_hit_fraction: 0.006112088052378942
       scaffold_hit_fraction_not_in_trainset: 0.004382373752344021
-      scaffold_TAScore_0-1_count: 56.0
-      scaffold_TAScore_1-10_count: 29.0
+      scaffold_TAScore_0-1_count: 57.0
+      scaffold_TAScore_1-10_count: 28.0
       scaffold_TAScore_10-100_count: 0.0
       scaffold_TAScore_>100_count: 0.0
     unseen:
@@ -111,8 +111,8 @@ metrics:
       smiles_hit_fraction: 0.00021455837830722656
       smiles_hit_fraction_not_in_trainset: 0.00021455837830722656
       smiles_TAScore_0-1_count: 33.0
-      smiles_TAScore_1-10_count: 0.0
-      smiles_TAScore_10-100_count: 2.0
+      smiles_TAScore_1-10_count: 1.0
+      smiles_TAScore_10-100_count: 1.0
       smiles_TAScore_>100_count: 0.0
       scaffold_hit_recovery: 33.0
       scaffold_hit_recovery_not_in_trainset: 33.0

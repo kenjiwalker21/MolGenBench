@@ -177,8 +177,8 @@ metrics:
       smiles_hit_fraction_not_in_trainset: 4.9391778609072495e-05
       smiles_TAScore_0-1_count: 114.0
       smiles_TAScore_1-10_count: 1.0
-      smiles_TAScore_10-100_count: 1.0
-      smiles_TAScore_>100_count: 4.0
+      smiles_TAScore_10-100_count: 2.0
+      smiles_TAScore_>100_count: 3.0
       scaffold_hit_recovery: 97.0
       scaffold_hit_recovery_not_in_trainset: 96.0
       scaffold_hit_rate: 0.03416666666666667
@@ -198,8 +198,8 @@ metrics:
       smiles_hit_fraction_not_in_trainset: 5.6375760626976614e-05
       smiles_TAScore_0-1_count: 80.0
       smiles_TAScore_1-10_count: 1.0
-      smiles_TAScore_10-100_count: 1.0
-      smiles_TAScore_>100_count: 3.0
+      smiles_TAScore_10-100_count: 2.0
+      smiles_TAScore_>100_count: 2.0
       scaffold_hit_recovery: 63.0
       scaffold_hit_recovery_not_in_trainset: 62.0
       scaffold_hit_rate: 0.034729411764705884

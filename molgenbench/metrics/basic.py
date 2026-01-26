@@ -5,6 +5,7 @@ from rdkit.Chem import QED, Descriptors, Lipinski, Crippen
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from medchem.structural import CommonAlertsFilters, NIBRFilters
 from medchem.structural.lilly_demerits import LillyDemeritsFilters
+from medchem.rules.basic_rules import rule_of_five_beyond
 
 from molgenbench.io.types import MoleculeRecord
 from molgenbench.metrics.base import MetricBase, Metric
@@ -63,17 +64,6 @@ class ChemFilterMetric(Metric):
             return scaffold_smiles
         except:
             return ''
-    
-    def obey_lipinski(self, mol):
-        mol = deepcopy(mol)
-        Chem.SanitizeMol(mol)
-        rule_1 = Descriptors.ExactMolWt(mol) < 500
-        rule_2 = Lipinski.NumHDonors(mol) <= 5
-        rule_3 = Lipinski.NumHAcceptors(mol) <= 10
-        logp = Crippen.MolLogP(mol)
-        rule_4 = (logp >= -2) & (logp <= 5)
-        rule_5 = Chem.rdMolDescriptors.CalcNumRotatableBonds(mol) <= 10
-        return np.sum([int(a) for a in [rule_1, rule_2, rule_3, rule_4, rule_5]])
 
     def passes_chem_filters(self, mol):
         common_filter = CommonAlertsFilters()
@@ -83,7 +73,7 @@ class ChemFilterMetric(Metric):
         results_common = common_filter([Chem.MolToSmiles(mol)])['pass_filter'].iloc[0]
         results_nibr = nibr_filter([Chem.MolToSmiles(mol)])['pass_filter'].iloc[0]
         results_lilly = lilly_filter([Chem.MolToSmiles(mol)])['pass_filter'].iloc[0]
-        results_RO5 = self.obey_lipinski(mol) == 5
+        results_RO5 = rule_of_five_beyond(Chem.MolToSmiles(mol))
         
         pass_all = all([results_common, results_nibr, results_lilly, results_RO5])
         

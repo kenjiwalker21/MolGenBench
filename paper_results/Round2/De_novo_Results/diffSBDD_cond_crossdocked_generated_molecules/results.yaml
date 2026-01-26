@@ -185,8 +185,8 @@ metrics:
       scaffold_hit_rate_not_in_trainset: 0.022775
       scaffold_hit_fraction: 0.007503955831021524
       scaffold_hit_fraction_not_in_trainset: 0.00657932682866796
-      scaffold_TAScore_0-1_count: 73.0
-      scaffold_TAScore_1-10_count: 47.0
+      scaffold_TAScore_0-1_count: 76.0
+      scaffold_TAScore_1-10_count: 44.0
       scaffold_TAScore_10-100_count: 0.0
       scaffold_TAScore_>100_count: 0.0
     seen:
@@ -206,8 +206,8 @@ metrics:
       scaffold_hit_rate_not_in_trainset: 0.02044705882352941
       scaffold_hit_fraction: 0.00781479699703856
       scaffold_hit_fraction_not_in_trainset: 0.006509438405480585
-      scaffold_TAScore_0-1_count: 49.0
-      scaffold_TAScore_1-10_count: 36.0
+      scaffold_TAScore_0-1_count: 50.0
+      scaffold_TAScore_1-10_count: 35.0
       scaffold_TAScore_10-100_count: 0.0
       scaffold_TAScore_>100_count: 0.0
     unseen:
@@ -227,8 +227,8 @@ metrics:
       scaffold_hit_rate_not_in_trainset: 0.028428571428571428
       scaffold_hit_fraction: 0.006749055856408725
       scaffold_hit_fraction_not_in_trainset: 0.006749055856408725
-      scaffold_TAScore_0-1_count: 24.0
-      scaffold_TAScore_1-10_count: 11.0
+      scaffold_TAScore_0-1_count: 26.0
+      scaffold_TAScore_1-10_count: 9.0
       scaffold_TAScore_10-100_count: 0.0
       scaffold_TAScore_>100_count: 0.0
   StrainEnergy_docked:

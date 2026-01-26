@@ -14,6 +14,7 @@ def read_sdf_to_records(
     protein_path: str,
     pocket_path: str,
     ref_active_path: str,
+    ref_motif_path: str,
 ) -> List[MoleculeRecord]:
     """
     Read one SDF file and convert all molecules into MoleculeRecord objects.
@@ -45,6 +46,7 @@ def read_sdf_to_records(
                 "protein_path": protein_path, 
                 "pocket_path": pocket_path,
                 "ref_active_path": ref_active_path,
+                "ref_motif_path": ref_motif_path,
             },
         )
         records.append(record)

@@ -39,17 +39,17 @@ metrics:
       Diversity: 0.8599101496590404
   MotifDist:
     all:
-      Atom Type_Score: 0.8795463797086275
-      Ring Type_Score: 0.7587359525793008
-      Functional Group_Score: 0.5530803927732435
+      Atom Type_Score: 0.8986332915215867
+      Ring Type_Score: 0.9118453598161421
+      Functional Group_Score: 0.6390587867609296
     seen:
-      Atom Type_Score: 0.8774957950791102
-      Ring Type_Score: 0.7540956826228192
-      Functional Group_Score: 0.5469912742102094
+      Atom Type_Score: 0.8950525473938856
+      Ring Type_Score: 0.9104089830825071
+      Functional Group_Score: 0.637451221899415
     unseen:
-      Atom Type_Score: 0.88444434756656
-      Ring Type_Score: 0.7698195688182113
-      Functional Group_Score: 0.5676246873980907
+      Atom Type_Score: 0.9071861546380389
+      Ring Type_Score: 0.9152762482427683
+      Functional Group_Score: 0.6428985702587192
   ChemFilter:
     all:
       smiles_pass_rate: 0.187325
@@ -177,6 +177,16 @@ metrics:
       scaffold_hit_fraction: 0.028199149371737724
       smiles_hit_num: 27.0
       Mean_normalized_affinity: 0.4678671356250849
+      sum_normalized_affinity_count_>=_0.5: 12.0
+      sum_normalized_affinity_count_>=_0.8: 4.0
+      sum_normalized_affinity_count_>=_0.9: 3.0
+      sum_normalized_affinity_count_>=_0.95: 1.0
+      sum_normalized_affinity_count_>=_0.99: 0.0
+      sum_max_normalized_affinity_count_>=_0.5: 12.0
+      sum_max_normalized_affinity_count_>=_0.8: 4.0
+      sum_max_normalized_affinity_count_>=_0.9: 3.0
+      sum_max_normalized_affinity_count_>=_0.95: 1.0
+      sum_max_normalized_affinity_count_>=_0.99: 0.0
     seen:
       smiles_hit_recovery: 21.0
       smiles_hit_rate: 0.00028708133971291867
@@ -186,6 +196,16 @@ metrics:
       scaffold_hit_fraction: 0.030879841598370053
       smiles_hit_num: 24.0
       Mean_normalized_affinity: 0.46053802854474446
+      sum_normalized_affinity_count_>=_0.5: 10.0
+      sum_normalized_affinity_count_>=_0.8: 3.0
+      sum_normalized_affinity_count_>=_0.9: 2.0
+      sum_normalized_affinity_count_>=_0.95: 1.0
+      sum_normalized_affinity_count_>=_0.99: 0.0
+      sum_max_normalized_affinity_count_>=_0.5: 10.0
+      sum_max_normalized_affinity_count_>=_0.8: 3.0
+      sum_max_normalized_affinity_count_>=_0.9: 2.0
+      sum_max_normalized_affinity_count_>=_0.95: 1.0
+      sum_max_normalized_affinity_count_>=_0.99: 0.0
     unseen:
       smiles_hit_recovery: 3.0
       smiles_hit_rate: 8.571428571428571e-05
@@ -195,6 +215,16 @@ metrics:
       scaffold_hit_fraction: 0.021796124510410225
       smiles_hit_num: 3.0
       Mean_normalized_affinity: 0.5264999922678083
+      sum_normalized_affinity_count_>=_0.5: 2.0
+      sum_normalized_affinity_count_>=_0.8: 1.0
+      sum_normalized_affinity_count_>=_0.9: 1.0
+      sum_normalized_affinity_count_>=_0.95: 0.0
+      sum_normalized_affinity_count_>=_0.99: 0.0
+      sum_max_normalized_affinity_count_>=_0.5: 2.0
+      sum_max_normalized_affinity_count_>=_0.8: 1.0
+      sum_max_normalized_affinity_count_>=_0.9: 1.0
+      sum_max_normalized_affinity_count_>=_0.95: 0.0
+      sum_max_normalized_affinity_count_>=_0.99: 0.0
   StrainEnergy_docked:
     all:
       StrainEnergy25%: 73.96
