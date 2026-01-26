@@ -366,10 +366,23 @@ class Aggregator:
             
             # Affinity sum
             found_smiles = group['found_smiles'].unique()
-            normalized_affinity_sum = 0.0
-            for smi in found_smiles:
-                if smi in normalized_affinity_info:
-                    normalized_affinity_sum += normalized_affinity_info[smi]
+            affinity_values = [
+                normalized_affinity_info[smi] 
+                for smi in found_smiles 
+                if smi in normalized_affinity_info
+            ]
+            
+            normalized_affinity_sum = sum(affinity_values)
+            max_normalized_affinity = max(affinity_values) if affinity_values else None
+            
+            # Counts above thresholds
+            thresholds = [0.5, 0.8, 0.9, 0.95, 0.99]
+            affinity_counts = {
+                t: sum(v >= t for v in affinity_values) for t in thresholds
+            }
+            max_affinity_counts = {
+                t: max_normalized_affinity >= t if max_normalized_affinity is not None else 0 for t in thresholds
+            }
             
             series_stats.append({
                 'uniprot': uniprot,
@@ -385,6 +398,9 @@ class Aggregator:
                 'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
                 # Affinity
                 'normalized_affinity_sum': normalized_affinity_sum,
+                'max_normalized_affinity': max_normalized_affinity,
+                **{f'normalized_affinity_count_>=_{t}': affinity_counts[t] for t in thresholds},
+                **{f'max_normalized_affinity_count_>=_{t}': max_affinity_counts[t] for t in thresholds},
             })
             
         stats_df = pd.DataFrame(series_stats)
@@ -395,6 +411,7 @@ class Aggregator:
         stats_unseen = stats_df[~stats_df['uniprot'].isin(uniprot_in_trainset)]
         
         def calc_metrics(sub_df):
+            thresholds = [0.5, 0.8, 0.9, 0.95, 0.99]
             return {
                 # SMILES metrics
                 "smiles_hit_recovery": sub_df['has_smiles_hit'].sum(),
@@ -407,6 +424,8 @@ class Aggregator:
                 # Affinity
                 'smiles_hit_num': sub_df['smiles_hit_num'].sum(),
                 'Mean_normalized_affinity': sub_df['normalized_affinity_sum'].sum() / sub_df['smiles_hit_num'].sum() if sub_df['smiles_hit_num'].sum() > 0 else 0.0,
+                **{f'sum_normalized_affinity_count_>=_{t}': sub_df[f'normalized_affinity_count_>=_{t}'].sum() for t in thresholds},
+                **{f'sum_max_normalized_affinity_count_>=_{t}': sub_df[f'max_normalized_affinity_count_>=_{t}'].sum() for t in thresholds},
                }
         
         return {
