@@ -185,8 +185,8 @@ metrics:
       scaffold_hit_rate_not_in_trainset: 0.016583333333333335
       scaffold_hit_fraction: 0.00684776863305401
       scaffold_hit_fraction_not_in_trainset: 0.0057228159985346526
-      scaffold_TAScore_0-1_count: 72.0
-      scaffold_TAScore_1-10_count: 47.0
+      scaffold_TAScore_0-1_count: 73.0
+      scaffold_TAScore_1-10_count: 46.0
       scaffold_TAScore_10-100_count: 1.0
       scaffold_TAScore_>100_count: 0.0
     seen:
@@ -227,8 +227,8 @@ metrics:
       scaffold_hit_rate_not_in_trainset: 0.020771428571428573
       scaffold_hit_fraction: 0.005582497214995527
       scaffold_hit_fraction_not_in_trainset: 0.005582497214995527
-      scaffold_TAScore_0-1_count: 26.0
-      scaffold_TAScore_1-10_count: 9.0
+      scaffold_TAScore_0-1_count: 27.0
+      scaffold_TAScore_1-10_count: 8.0
       scaffold_TAScore_10-100_count: 0.0
       scaffold_TAScore_>100_count: 0.0
   StrainEnergy_docked:
