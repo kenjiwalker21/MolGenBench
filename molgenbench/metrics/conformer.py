@@ -329,6 +329,7 @@ class InteractionScoreMetric(Metric):
             protein_path=protein_path,
             pocket_path=None,
             ref_active_path=None,
+            ref_motif_path=None,
         )
 
         active_df = self._compute_fp_df(active_records, protein_path)

@@ -211,7 +211,7 @@ class Evaluator:
                 return
             
             records = read_sdf_to_records(
-                uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path
+                uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_active_path
             )
             if not self.evaluateDocked:
                 docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
@@ -229,6 +229,7 @@ class Evaluator:
                 return
             for series_id in os.listdir(uniprot_path):
                 series_path = os.path.join(uniprot_path, series_id)
+                ref_motif_path = os.path.join(root_dir, uniprot, "reference_active_molecules", "Hit2Lead", f"{uniprot}_{series_id}_with_common_scaffold.sdf")
                 
                 if not self.evaluateDocked:
                     sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
@@ -249,7 +250,7 @@ class Evaluator:
                     continue
                 
                 records = read_sdf_to_records(
-                    uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path
+                    uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_motif_path
                 )
                 if not self.evaluateDocked:
                     docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
