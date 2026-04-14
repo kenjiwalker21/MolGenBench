@@ -211,7 +211,7 @@ class Evaluator:
                 return
             
             records = read_sdf_to_records(
-                uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_active_path
+                uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_active_path, round=round
             )
             if not self.evaluateDocked:
                 docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
@@ -250,7 +250,7 @@ class Evaluator:
                     continue
                 
                 records = read_sdf_to_records(
-                    uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_motif_path
+                    uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_motif_path, round=round
                 )
                 if not self.evaluateDocked:
                     docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
