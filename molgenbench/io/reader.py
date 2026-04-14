@@ -15,6 +15,7 @@ def read_sdf_to_records(
     pocket_path: str,
     ref_active_path: str,
     ref_motif_path: str,
+    round: str,
 ) -> List[MoleculeRecord]:
     """
     Read one SDF file and convert all molecules into MoleculeRecord objects.
@@ -39,6 +40,7 @@ def read_sdf_to_records(
             smiles=smiles,
             uniprot=uniprot,
             series=series,
+            round=round,
             rdkit_mol=mol,
             num_rotatable_bonds=num_rotatable_bonds,
             metadata={
