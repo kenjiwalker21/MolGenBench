@@ -27,7 +27,7 @@ def auto_import_metrics():
 
         try:
             importlib.import_module(full_module_name)
-            print(f"[Metrics] Loaded: {full_module_name}")
+            # print(f"[Metrics] Loaded: {full_module_name}")
         except Exception as e:
             print(f"[Metrics] Failed to load {full_module_name}: {e}")
 
