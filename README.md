@@ -3,6 +3,8 @@
 ![MolGenBench overview](./FigShow/MolGenBench.svg "Overview of MolGenBench pipeline")
 
 ## 🔔 News
+[2026-01-09] We have released Version 4 of the [dataset](https://zenodo.org/records/20233505). In this release, we fixed the raw CSV results of MotifDist for the H2L model. The aggregated YAML results under the `paper_results` folder were already correct as of commit [`afae9326`](https://github.com/Intelligent-Drug-Discovery-Lab/MolGenBench/tree/afae93266cd4b7e7f63878adfa7612b746b8cac9).
+
 [2026-01-09] We have released Version 3 of the [dataset](https://zenodo.org/records/18183463). In this release, we added pre-computed evaluation CSV results to each results folder. We also uploaded the aggregated results under the `paper_results` folder in the repository.
 
 [2025-12-12] We have released Version 2 of the [dataset](https://zenodo.org/records/17890389). Compared with Version 1, this update additionally includes precomputed InChI and SMILES for active molecules, which significantly accelerates the HitRediscovery calculation.
