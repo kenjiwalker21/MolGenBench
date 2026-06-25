@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 from rdkit import Chem
 
 from posecheck.utils.chem import remove_radicals
@@ -14,8 +14,6 @@ def read_sdf_to_records(
     protein_path: str,
     pocket_path: str,
     ref_active_path: str,
-    ref_motif_path: str,
-    round: str,
 ) -> List[MoleculeRecord]:
     """
     Read one SDF file and convert all molecules into MoleculeRecord objects.
@@ -28,7 +26,7 @@ def read_sdf_to_records(
     Returns:
         List[MoleculeRecord]: List of MoleculeRecord objects.
     """
-    suppl = Chem.SDMolSupplier(str(path))
+    suppl = Chem.SDMolSupplier(str(path), removeHs=False)
     records: List[MoleculeRecord] = []
 
     for i, mol in enumerate(suppl):
@@ -40,7 +38,6 @@ def read_sdf_to_records(
             smiles=smiles,
             uniprot=uniprot,
             series=series,
-            round=round,
             rdkit_mol=mol,
             num_rotatable_bonds=num_rotatable_bonds,
             metadata={
@@ -48,7 +45,6 @@ def read_sdf_to_records(
                 "protein_path": protein_path, 
                 "pocket_path": pocket_path,
                 "ref_active_path": ref_active_path,
-                "ref_motif_path": ref_motif_path,
             },
         )
         records.append(record)
@@ -85,6 +81,14 @@ def attach_docked_molecules(
     for record in records:
         name = record.id
         if name in docked_dict:
-            record.metadata["docked_mol"] = docked_dict[name]
+            mol = docked_dict[name]
+            record.metadata["docked_mol"] = mol
+            # Extract vina affinity as a plain float so it survives pickle
+            # roundtrips in parallel workers (RDKit mol properties are not
+            # preserved through pickle).
+            try:
+                record.metadata["vina_dock_affinity"] = float(mol.GetProp("vina_dock"))
+            except (KeyError, ValueError):
+                pass
 
     return records

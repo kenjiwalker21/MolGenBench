@@ -18,7 +18,9 @@
 from __future__ import print_function
 
 from rdkit import Chem
+import numpy as np
 from rdkit.Chem import rdMolDescriptors
+# from rdkit.Chem import rdFingerprintGenerator
 from six.moves import cPickle
 from six import iteritems
 
@@ -26,6 +28,9 @@ import math
 from collections import defaultdict
 
 import os.path as op
+
+# RNG = np.random.default_rng()
+# morgan_fp_gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, includeChirality=False)
 
 _fscores = None
 

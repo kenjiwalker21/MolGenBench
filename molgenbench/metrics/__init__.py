@@ -6,6 +6,13 @@ from pathlib import Path
 
 # 导出注册表
 from .base import METRIC_REGISTRY
+from .basic import (
+    ValidMetric,
+    QEDMetric,
+    SAMetric,
+    ChemFilterMetric,
+    ReferenceSimilarityMetric,
+)
 
 # 当前目录路径
 package_dir = Path(__file__).parent
@@ -34,5 +41,12 @@ def auto_import_metrics():
 # 自动导入（模块导入时即执行）
 auto_import_metrics()
 
-__all__ = ["METRIC_REGISTRY"]
+__all__ = [
+    "METRIC_REGISTRY",
+    "ValidMetric",
+    "QEDMetric",
+    "SAMetric",
+    "ChemFilterMetric",
+    "ReferenceSimilarityMetric",
+]
 

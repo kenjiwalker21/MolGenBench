@@ -133,7 +133,8 @@ def compute_hit_info_h2l(generated_dir,round_id_list,model_name_list,save_dir = 
                 uniprot_ref_smiles_list = []
                 uniprot_gen_smiles_list = []
                 
-                for uniprot_id in tqdm(os.listdir(generated_dir),total = len(os.listdir(generated_dir))):
+                uniprot_dirs = [u for u in os.listdir(generated_dir) if u.startswith(('O', 'P', 'Q'))]
+                for uniprot_id in tqdm(uniprot_dirs, total=len(uniprot_dirs)):
                     
                     ref_actives_path = os.path.join(generated_dir,uniprot_id,f'reference_active_molecules/{uniprot_id}_reference_active_molecules.sdf')
                     

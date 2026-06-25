@@ -159,15 +159,14 @@ class MotifDistMetric(Metric):
         gen_atoms, gen_rings, gen_fgs = [], [], []
         
         sample = gen_records[0]
-        ref_path = sample.metadata.get("ref_motif_path", None)
+        ref_active_path = sample.metadata.get("ref_active_path", None)
         ref_records = read_sdf_to_records(
             uniprot=sample.uniprot,
             series=sample.series,
-            path=ref_path,
+            path=ref_active_path,
             protein_path=sample.metadata.get("protein_path", None),
             pocket_path=None,
             ref_active_path=None,
-            ref_motif_path=None,
         )
 
         for r in ref_records:

@@ -3,6 +3,7 @@ import yaml
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Optional
+import time
 
 from sup_info.utils import uniprot_in_trainset, ref_smiles_scaffold_unique_count_denovo, ref_smiles_scaffold_unique_count_h2l
 from sup_info.affinity_info import normalized_affinity_info_map
@@ -17,9 +18,10 @@ class Aggregator:
     def __init__(self, metric_names: List[str] = None):
         self.metric_names = metric_names or [
             "Validity", "QED", "SA", "Uniqueness", "Diversity",
-            "MotifDist", "ChemFilter",
-            "PoseBuster", "StrainEnergy", "RMSD", "InteractionScore", "ClashScore",
-            "HitRediscover","StrainEnergy_docked", "InteractionScore_docked", "ClashScore_docked"
+            "ReferenceSimilarity", "MotifDist", "ChemFilter",
+            "PoseBuster", "StrainEnergy", "RMSD", "InteractionScore", "InteractionDiversity", "ClashScore",
+            "VinaAffinity",
+            "HitRediscover"
         ]
         
         # Metric -> aggregation function mapping
@@ -30,23 +32,27 @@ class Aggregator:
             "Uniqueness": self._aggregate_uniqueness,
             "Diversity": self._aggregate_diversity,
             
+            "ReferenceSimilarity": self._aggregate_reference_similarity,
             "MotifDist": self._aggregate_motif_dist,
             "ChemFilter": self._aggregate_chemfilter,
             "PoseBuster": self._aggregate_posebuster,
             "StrainEnergy": self._aggregate_strain_energy,
-            "StrainEnergy_docked": self._aggregate_strain_energy,
             "RMSD": self._aggregate_rmsd,
             "InteractionScore": self._aggregate_interaction_score,
-            "InteractionScore_docked": self._aggregate_interaction_score,
+            "InteractionDiversity": self._aggregate_interaction_diversity,
             "ClashScore": self._aggregate_clash_score,
-            "ClashScore_docked": self._aggregate_clash_score,
+            "VinaAffinity": self._aggregate_vina_affinity,
             "HitRediscover": self._aggregate_hit_rediscover,
         }
+
+        print('Aggregation for the following metrics:', self.metric_names)
         
         self.mode = None
         self.output_dir = None
         # Store reference percentiles for InteractionScore
         self.ref_interaction_percentiles = None
+        # Store reference vina affinity percentiles
+        self.ref_vina_affinity_percentiles = None
         
         self.ref_smiles = None
         self.ref_scaffold = None
@@ -71,6 +77,8 @@ class Aggregator:
         metric_dfs = {metric: [] for metric in self.metric_names}
         
         for uniprot in os.listdir(root_dir):
+            if not uniprot.startswith(('O', 'P', 'Q')):
+                continue
             uniprot_path = os.path.join(root_dir, uniprot, round, mode)
             
             if mode == "De_novo_Results":
@@ -109,7 +117,7 @@ class Aggregator:
     # ========================== #
     #   Aggregation Methods
     # ========================== #
-    def _aggregate_validity(self, df: pd.DataFrame, metric_name: str = "Validity") -> Dict[str, Any]:
+    def _aggregate_validity(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         values_all = df[metric_name].sum() / 120000
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].sum() / 85000
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].sum() / 35000
@@ -120,7 +128,7 @@ class Aggregator:
             "unseen": {"Validity": values_unseen},
         }
     
-    def _aggregate_qed(self, df: pd.DataFrame, metric_name: str = "QED") -> Dict[str, Any]:
+    def _aggregate_qed(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -131,7 +139,7 @@ class Aggregator:
             "unseen": {"QED": values_unseen},
         }
 
-    def _aggregate_sa(self, df: pd.DataFrame, metric_name: str = "SA") -> Dict[str, Any]:
+    def _aggregate_sa(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -142,7 +150,7 @@ class Aggregator:
             "unseen": {"SA": values_unseen},
         }
 
-    def _aggregate_uniqueness(self, df: pd.DataFrame, metric_name: str = "Uniqueness") -> Dict[str, Any]:
+    def _aggregate_uniqueness(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -153,7 +161,7 @@ class Aggregator:
             "unseen": {"Uniqueness": values_unseen},
         }
 
-    def _aggregate_diversity(self, df: pd.DataFrame, metric_name: str = "Diversity") -> Dict[str, Any]:
+    def _aggregate_diversity(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
         values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -164,7 +172,18 @@ class Aggregator:
             "unseen": {"Diversity": values_unseen},
         }
     
-    def _aggregate_motif_dist(self, df: pd.DataFrame, metric_name: str = "MotifDist") -> Dict[str, Any]:
+    def _aggregate_reference_similarity(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
+        values_all = df[metric_name].mean()
+        values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
+        values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
+
+        return {
+            "all": {"ReferenceSimilarity": values_all},
+            "seen": {"ReferenceSimilarity": values_seen},
+            "unseen": {"ReferenceSimilarity": values_unseen},
+        }
+
+    def _aggregate_motif_dist(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         result = {"all": {}, "seen": {}, "unseen": {}}
         
         for subtype in ["Atom Type", "Ring Type", "Functional Group"]:
@@ -175,12 +194,12 @@ class Aggregator:
                 score_seen = (1 - df[df['uniprot'].isin(uniprot_in_trainset)][js_col]).mean()
                 score_unseen = (1 - df[~df['uniprot'].isin(uniprot_in_trainset)][js_col]).mean()
                 
-                result["all"][f"{subtype}_Score"] = score_all
-                result["seen"][f"{subtype}_Score"] = score_seen
-                result["unseen"][f"{subtype}_Score"] = score_unseen
+                result["all"][f"{subtype}_Type_Score"] = score_all
+                result["seen"][f"{subtype}_Type_Score"] = score_seen
+                result["unseen"][f"{subtype}_Type_Score"] = score_unseen
         return result
         
-    def _aggregate_chemfilter(self, df: pd.DataFrame, metric_name: str = "ChemFilter") -> Dict[str, Any]:
+    def _aggregate_chemfilter(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         df_seen = df[df['uniprot'].isin(uniprot_in_trainset)]
         df_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)]
         
@@ -220,7 +239,7 @@ class Aggregator:
             },
         }
     
-    def _aggregate_posebuster(self, df: pd.DataFrame, metric_name: str = "PoseBuster") -> Dict[str, Any]:
+    def _aggregate_posebuster(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         """Aggregate PoseBuster metrics, compute pass rate for each sub-metric"""
         exclude_cols = ["id", "smiles", "uniprot", "series", "num_rotatable_bonds"]
         
@@ -228,13 +247,19 @@ class Aggregator:
         df = df[df['all_atoms_connected'] == True]
         
         check_cols = [col for col in df.columns if col not in exclude_cols]
+
+        exclude_cols_ligand = ["id", "smiles", "uniprot", "series", "num_rotatable_bonds", "protein-ligand_maximum_distance", "minimum_distance_to_protein", "minimum_distance_to_organic_cofactors", "minimum_distance_to_inorganic_cofactors", "minimum_distance_to_waters", "volume_overlap_with_protein"]
+
+        check_cols_ligand = [col for col in df.columns if col not in exclude_cols_ligand]
         df['pass_all'] = df[check_cols].all(axis=1)
+        print(check_cols_ligand)
+        df['pass_all_ligand'] = df[check_cols_ligand].all(axis=1)
         
         df_seen = df[df['uniprot'].isin(uniprot_in_trainset)]
         df_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)]
         
         # columns to calculate (including pass_all)
-        metric_cols = check_cols + ['pass_all']
+        metric_cols = check_cols + ['pass_all'] + ['pass_all_ligand']
         
         return {
             'all': {col: df[col].sum() / 120000 for col in metric_cols},
@@ -284,9 +309,11 @@ class Aggregator:
     def _aggregate_interaction_score(self, df: pd.DataFrame, metric_name: str = "InteractionScore") -> Dict[str, Any]:
         
         # Group by uniprot and calculate proportion exceeding each percentile
+        print('Running interaction score aggregation...')
         uniprot_stats = []
         for uniprot, group in df.groupby('uniprot'):
             if len(group) == 0:
+                print('[InteractionScore] No molecules found for uniprot:', uniprot)
                 continue
             
             ref = self.ref_interaction_percentiles[uniprot]
@@ -300,6 +327,7 @@ class Aggregator:
             })
         
         stats_df = pd.DataFrame(uniprot_stats)
+        print('[InteractionScore] Stats DataFrame:', stats_df.head())
         
         # Split into seen and unseen
         stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
@@ -324,6 +352,17 @@ class Aggregator:
             },
         }
     
+    def _aggregate_interaction_diversity(self, df: pd.DataFrame, metric_name: str = "InteractionDiversity") -> Dict[str, Any]:
+        values_all = df["mean"].mean()
+        values_seen = df[df['uniprot'].isin(uniprot_in_trainset)]["mean"].mean()
+        values_unseen = df[~df['uniprot'].isin(uniprot_in_trainset)]["mean"].mean()
+
+        return {
+            "all": {"InteractionDiversity": values_all},
+            "seen": {"InteractionDiversity": values_seen},
+            "unseen": {"InteractionDiversity": values_unseen},
+        }
+
     def _aggregate_clash_score(self, df: pd.DataFrame, metric_name: str = "ClashScore") -> Dict[str, Any]:
         values_all = df[metric_name].mean()
         values_seen = df[df['uniprot'].isin(uniprot_in_trainset)][metric_name].mean()
@@ -335,7 +374,59 @@ class Aggregator:
             "unseen": {"ClashScore": values_unseen},
         }
     
-    def _aggregate_hit_rediscover(self, df: pd.DataFrame, metric_name: str = "HitRediscover") -> Dict[str, Any]:
+    def _aggregate_vina_affinity(self, df: pd.DataFrame, metric_name: str = "VinaAffinity") -> Dict[str, Any]:
+        """
+        Per-uniprot, compare mean and top (best = most negative) vina affinity of
+        generated molecules against reference percentiles.
+
+        Outputs:
+          - mean_affinity / top_affinity: raw kcal/mol averages across uniprots
+          - VinaAffinity<p25/p50/p75: fraction of molecules with affinity better
+            (more negative) than each reference percentile
+        """
+        print('Running vina affinity aggregation...')
+        uniprot_stats = []
+        for uniprot, group in df.groupby('uniprot'):
+            scores = pd.to_numeric(group[metric_name], errors='coerce').dropna().clip(upper=0)
+            if len(scores) == 0:
+                print(f'[VinaAffinity] No valid scores for {uniprot}')
+                continue
+
+            ref = self.ref_vina_affinity_percentiles.get(uniprot)
+            if ref is None:
+                print(f'[VinaAffinity] No reference percentiles for {uniprot}')
+                continue
+
+            # Lower (more negative) affinity is better, so "beats" means < percentile
+            uniprot_stats.append({
+                'uniprot': uniprot,
+                'mean_affinity': scores.mean(),
+                'top_affinity': scores.min(),
+                'beats_p25': (scores < ref['p25']).mean(),
+                'beats_p50': (scores < ref['p50']).mean(),
+                'beats_p75': (scores < ref['p75']).mean(),
+            })
+
+        stats_df = pd.DataFrame(uniprot_stats)
+        stats_seen = stats_df[stats_df['uniprot'].isin(uniprot_in_trainset)]
+        stats_unseen = stats_df[~stats_df['uniprot'].isin(uniprot_in_trainset)]
+
+        def calc(sub_df):
+            return {
+                'mean_affinity': sub_df['mean_affinity'].mean(),
+                'top_affinity': sub_df['top_affinity'].mean(),
+                'VinaAffinity<p25': sub_df['beats_p25'].mean(),
+                'VinaAffinity<p50': sub_df['beats_p50'].mean(),
+                'VinaAffinity<p75': sub_df['beats_p75'].mean(),
+            }
+
+        return {
+            'all': calc(stats_df),
+            'seen': calc(stats_seen),
+            'unseen': calc(stats_unseen),
+        }
+
+    def _aggregate_hit_rediscover(self, df: pd.DataFrame, metric_name: str) -> Dict[str, Any]:
         if self.mode == "De_novo_Results":
             return self._aggregate_hit_rediscover_denovo(df, metric_name)
         elif self.mode == "Hit_to_Lead_Results":
@@ -366,23 +457,10 @@ class Aggregator:
             
             # Affinity sum
             found_smiles = group['found_smiles'].unique()
-            affinity_values = [
-                normalized_affinity_info[smi] 
-                for smi in found_smiles 
-                if smi in normalized_affinity_info
-            ]
-            
-            normalized_affinity_sum = sum(affinity_values)
-            max_normalized_affinity = max(affinity_values) if affinity_values else None
-            
-            # Counts above thresholds
-            thresholds = [0.5, 0.8, 0.9, 0.95, 0.99]
-            affinity_counts = {
-                t: sum(v >= t for v in affinity_values) for t in thresholds
-            }
-            max_affinity_counts = {
-                t: max_normalized_affinity >= t if max_normalized_affinity is not None else 0 for t in thresholds
-            }
+            normalized_affinity_sum = 0.0
+            for smi in found_smiles:
+                if smi in normalized_affinity_info:
+                    normalized_affinity_sum += normalized_affinity_info[smi]
             
             series_stats.append({
                 'uniprot': uniprot,
@@ -398,9 +476,6 @@ class Aggregator:
                 'scaffold_hit_fraction': unique_scaffold_hits / n_ref_scaffolds,
                 # Affinity
                 'normalized_affinity_sum': normalized_affinity_sum,
-                'max_normalized_affinity': max_normalized_affinity,
-                **{f'normalized_affinity_count_>=_{t}': affinity_counts[t] for t in thresholds},
-                **{f'max_normalized_affinity_count_>=_{t}': max_affinity_counts[t] for t in thresholds},
             })
             
         stats_df = pd.DataFrame(series_stats)
@@ -411,7 +486,6 @@ class Aggregator:
         stats_unseen = stats_df[~stats_df['uniprot'].isin(uniprot_in_trainset)]
         
         def calc_metrics(sub_df):
-            thresholds = [0.5, 0.8, 0.9, 0.95, 0.99]
             return {
                 # SMILES metrics
                 "smiles_hit_recovery": sub_df['has_smiles_hit'].sum(),
@@ -424,8 +498,6 @@ class Aggregator:
                 # Affinity
                 'smiles_hit_num': sub_df['smiles_hit_num'].sum(),
                 'Mean_normalized_affinity': sub_df['normalized_affinity_sum'].sum() / sub_df['smiles_hit_num'].sum() if sub_df['smiles_hit_num'].sum() > 0 else 0.0,
-                **{f'sum_normalized_affinity_count_>=_{t}': sub_df[f'normalized_affinity_count_>=_{t}'].sum() for t in thresholds},
-                **{f'sum_max_normalized_affinity_count_>=_{t}': sub_df[f'max_normalized_affinity_count_>=_{t}'].sum() for t in thresholds},
                }
         
         return {
@@ -461,14 +533,12 @@ class Aggregator:
             n_ref_scaffolds = ref_smiles_scaffold_unique_count_denovo[uniprot + "_scaffold"]
             
             # Target Aware Score calculations
-            ref_smiles = set(self.ref_smiles[uniprot])
-            smiles_intersection_specific = len(ref_smiles.intersection(set(group['gen_smiles']))) / group['gen_smiles'].nunique()
-            smiles_intersection_all = len(ref_smiles.intersection(set(df['gen_smiles']))) / df['gen_smiles'].nunique()
+            smiles_intersection_specific = unique_smiles_hits / group['gen_smiles'].nunique()
+            smiles_intersection_all = len(set(self.ref_smiles[uniprot]).intersection(set(df['gen_smiles']))) / df['gen_smiles'].nunique()
             smiles_target_aware_score = smiles_intersection_specific / (smiles_intersection_all + 1e-10)
             
-            ref_scaffold = set(self.ref_scaffold[uniprot])
-            scaffold_intersection_specific = group[group['gen_scaffold'].isin(ref_scaffold)]['gen_smiles'].nunique() / group['gen_smiles'].nunique()
-            all_intersection_scaffold = ref_scaffold.intersection(set(df['gen_scaffold']))
+            scaffold_intersection_specific = unique_scaffold_hits_to_smiles / group['gen_smiles'].nunique()
+            all_intersection_scaffold = set(self.ref_scaffold[uniprot]).intersection(set(df['gen_scaffold']))
             # Build dict only for intersection scaffolds
             gen_all_scaffold_to_smiles = df.groupby('gen_scaffold')['gen_smiles'].apply(set).to_dict()
             find_scaffold_to_smiles = set()
@@ -561,7 +631,8 @@ class Aggregator:
         """
         
         if metric_name in self.aggregation_map:
-            return self.aggregation_map[metric_name](df)
+            return self.aggregation_map[metric_name](df, metric_name)
+        
 
     def run(
         self,
@@ -584,10 +655,13 @@ class Aggregator:
         Returns:
             Aggregated results dictionary
         """
+        start_time = time.time()
         # Step 0: Load reference interaction scores and reference SMILES/scaffolds
         self.mode = mode
-        if "InteractionScore" in self.metric_names or "InteractionScore_docked" in self.metric_names:
+        if "InteractionScore" in self.metric_names:
             self.ref_interaction_percentiles = self.load_reference_interaction_scores(root_dir)
+        if "VinaAffinity" in self.metric_names:
+            self.ref_vina_affinity_percentiles = self.load_reference_vina_affinities(root_dir)
         self.ref_smiles, self.ref_scaffold = self.load_reference_smiles_and_scaffolds(root_dir)
         self.output_dir = os.path.dirname(output_path)
         os.makedirs(self.output_dir, exist_ok=True)
@@ -609,7 +683,8 @@ class Aggregator:
         # Step 3: Output YAML
         if output_path:
             self.save_to_yaml(all_results, output_path)
-        
+        total_time = time.time() - start_time
+        print(f"Aggregation completed in {total_time // 60:.0f} minutes and {total_time % 60:.0f} seconds")
         return all_results
 
     def load_reference_smiles_and_scaffolds(self, root_dir: str):
@@ -625,6 +700,8 @@ class Aggregator:
         ref_scaffolds = {}
         
         for uniprot in os.listdir(root_dir):
+            if not uniprot.startswith(('O', 'P', 'Q')):
+                continue
             cached_ref_smiles_path = os.path.join(
                 root_dir,
                 uniprot,
@@ -646,6 +723,56 @@ class Aggregator:
             
         return ref_smiles, ref_scaffolds
 
+    def load_reference_vina_affinities(self, root_dir: str) -> Dict[str, Dict[str, float]]:
+        """
+        Load reference vina affinity percentiles per uniprot from the pre-docked
+        reference SDF files.
+
+        Returns:
+            Dict mapping uniprot -> {"p25": float, "p50": float, "p75": float,
+                                     "mean": float, "top": float}
+        """
+        from rdkit import Chem
+        ref_percentiles = {}
+
+        for uniprot in os.listdir(root_dir):
+            if not uniprot.startswith(('O', 'P', 'Q')):
+                continue
+            sdf_path = os.path.join(
+                root_dir,
+                uniprot,
+                "reference_active_molecules",
+                f"{uniprot}_reference_active_molecules_vina_docked.sdf",
+            )
+            if not os.path.exists(sdf_path):
+                print(f"[VinaAffinity] Reference docked SDF not found for {uniprot} at {sdf_path}")
+                continue
+
+            suppl = Chem.SDMolSupplier(sdf_path)
+            affinities = []
+            for mol in suppl:
+                if mol is None:
+                    continue
+                try:
+                    affinities.append(float(mol.GetProp("vina_dock")))
+                except (KeyError, ValueError):
+                    continue
+
+            if not affinities:
+                print(f"[VinaAffinity] No valid vina_dock values in reference SDF for {uniprot}")
+                continue
+
+            arr = np.array(affinities)
+            ref_percentiles[uniprot] = {
+                "p25": float(np.percentile(arr, 25)),
+                "p50": float(np.percentile(arr, 50)),
+                "p75": float(np.percentile(arr, 75)),
+                "mean": float(arr.mean()),
+                "top": float(arr.min()),
+            }
+
+        return ref_percentiles
+
     def load_reference_interaction_scores(self, root_dir: str) -> Dict[str, Dict[str, float]]:
         """
         Load reference interaction scores and compute percentiles per uniprot.
@@ -656,6 +783,8 @@ class Aggregator:
         ref_percentiles = {}
         
         for uniprot in os.listdir(root_dir):
+            if not uniprot.startswith(('O', 'P', 'Q')):
+                continue
             csv_path = os.path.join(
                 root_dir, 
                 uniprot, 
@@ -664,7 +793,8 @@ class Aggregator:
             )
             
             if not os.path.exists(csv_path):
-                raise FileNotFoundError(f"Reference interaction scores CSV not found for {uniprot} at {csv_path}")
+                print(f"Reference interaction scores CSV not found for {uniprot} at {csv_path}")
+                continue
             
             df = pd.read_csv(csv_path)
             ref_percentiles[uniprot] = {

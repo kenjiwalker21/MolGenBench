@@ -1,16 +1,118 @@
 import os
-import numpy as np
+import logging
 import pandas as pd
 from rdkit import Chem
 from tqdm import tqdm
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from joblib import Parallel, delayed
 from molgenbench.io.types import MoleculeRecord
 from molgenbench.io.reader import read_sdf_to_records, attach_docked_molecules
-from molgenbench.metrics.basic import ValidMetric, QEDMetric, SAMetric, ChemFilterMetric
-from molgenbench.metrics.conformer import PoseBusterMetric, StrainEnergyMetrics, RMSDMetric, InteractionScoreMetric, ClashScoreMetric
+from molgenbench.metrics.basic import ValidMetric, QEDMetric, SAMetric, ChemFilterMetric, ReferenceSimilarityMetric
+from molgenbench.metrics.conformer import PoseBusterMetric, StrainEnergyMetrics, RMSDMetric, InteractionScoreMetric, InteractionDiversityMetric, ClashScoreMetric, VinaAffinityMetric
 from molgenbench.metrics.distribution import DiversityMetric, UniquenessMetric, MotifDistMetric
 from molgenbench.metrics.hitrate import HitRediscoverMetric
+
+_logger = logging.getLogger(__name__)
+
+
+# https://gist.github.com/tsvikas/5f859a484e53d4ef93400751d0a116de
+class ParallelTqdm(Parallel):
+    """joblib.Parallel, but with a tqdm progressbar
+
+    Additional parameters:
+    ----------------------
+    total_tasks: int, default: None
+        the number of expected jobs. Used in the tqdm progressbar.
+        If None, try to infer from the length of the called iterator, and
+        fallback to use the number of remaining items as soon as we finish
+        dispatching.
+        Note: use a list instead of an iterator if you want the total_tasks
+        to be inferred from its length.
+
+    desc: str, default: None
+        the description used in the tqdm progressbar.
+
+    disable_progressbar: bool, default: False
+        If True, a tqdm progressbar is not used.
+
+    show_joblib_header: bool, default: False
+        If True, show joblib header before the progressbar.
+
+    Removed parameters:
+    -------------------
+    verbose: will be ignored
+
+
+    Usage:
+    ------
+    >>> from joblib import delayed
+    >>> from time import sleep
+    >>> ParallelTqdm(n_jobs=-1)([delayed(sleep)(.1) for _ in range(10)])
+    80%|████████  | 8/10 [00:02<00:00,  3.12tasks/s]
+
+    """
+
+    def __init__(
+        self,
+        *,
+        total_tasks: Optional[int] = None,
+        desc: Optional[str] = None,
+        disable_progressbar: bool = False,
+        show_joblib_header: bool = False,
+        **kwargs,
+    ):
+        if "verbose" in kwargs:
+            raise ValueError(
+                "verbose is not supported. "
+                "Use show_progressbar and show_joblib_header instead."
+            )
+        super().__init__(verbose=(1 if show_joblib_header else 0), **kwargs)
+        self.total_tasks = total_tasks
+        self.desc = desc
+        self.disable_progressbar = disable_progressbar
+        self.progress_bar: tqdm | None = None
+
+    def __call__(self, iterable):
+        try:
+            if self.total_tasks is None:
+                # try to infer total_tasks from the length of the called iterator
+                try:
+                    self.total_tasks = len(iterable)
+                except (TypeError, AttributeError):
+                    pass
+            # call parent function
+            return super().__call__(iterable)
+        finally:
+            # close tqdm progress bar
+            if self.progress_bar is not None:
+                self.progress_bar.close()
+
+    __call__.__doc__ = Parallel.__call__.__doc__
+
+    def dispatch_one_batch(self, iterator):
+        # start progress_bar, if not started yet.
+        if self.progress_bar is None:
+            self.progress_bar = tqdm(
+                desc=self.desc,
+                total=self.total_tasks,
+                disable=self.disable_progressbar,
+                unit="tasks",
+            )
+        # call parent function
+        return super().dispatch_one_batch(iterator)
+
+    dispatch_one_batch.__doc__ = Parallel.dispatch_one_batch.__doc__
+
+    def print_progress(self):
+        """Display the process of the parallel execution using tqdm"""
+        # if we finish dispatching, find total_tasks from the number of remaining items
+        if self.progress_bar is not None:
+            if self.total_tasks is None and self._original_iterator is None:
+                self.total_tasks = self.n_dispatched_tasks
+                self.progress_bar.total = self.total_tasks
+                self.progress_bar.refresh()
+            # update progressbar
+            self.progress_bar.update(self.n_completed_tasks - self.progress_bar.n)
 
 
 class Evaluator:
@@ -19,19 +121,8 @@ class Evaluator:
     grouped by Uniprot or Series depending on task type.
     """
 
-    def __init__(
-        self, 
-        metric_names: List[str] = None, 
-        fixStereoFrom3D: bool = True, 
-        evaluateDocked: bool = False
-    ):
-        self.evaluateDocked = evaluateDocked
-        
-        if self.evaluateDocked:
-            self.metric_names = [name for name in metric_names if name in ["StrainEnergy", "InteractionScore", "ClashScore"]]
-        else:
-            self.metric_names = metric_names
-            
+    def __init__(self, metric_names: List[str] = None, fixStereoFrom3D: bool = True):
+        self.metric_names = metric_names or ["Validity", "QED", "SA", "Uniqueness", "Diversity", "ReferenceSimilarity", "PoseBuster", "StrainEnergy", "RMSD", "HitRediscover"]
         self.metric_map = {
             "Validity": ValidMetric(),
             "QED": QEDMetric(),
@@ -39,12 +130,15 @@ class Evaluator:
             "Uniqueness": UniquenessMetric(),
             "Diversity": DiversityMetric(),
             "ChemFilter": ChemFilterMetric(),
-            
+            "ReferenceSimilarity": ReferenceSimilarityMetric(),
+
             "PoseBuster": PoseBusterMetric(),
             "StrainEnergy": StrainEnergyMetrics(),
             "RMSD": RMSDMetric(),
             "InteractionScore": InteractionScoreMetric(),
+            "InteractionDiversity": InteractionDiversityMetric(),
             "ClashScore": ClashScoreMetric(),
+            "VinaAffinity": VinaAffinityMetric(),
             
             "MotifDist": MotifDistMetric(),
             
@@ -64,13 +158,15 @@ class Evaluator:
                 
                 "ClashScore",
                 "InteractionScore",
+                "VinaAffinity",
                 "ChemFilter",
+                "ReferenceSimilarity",
                 "HitRediscover"
                 
             ]
         ]
         self.dataset_metrics = [
-            self.metric_map[n] for n in self.metric_names if n in ["Diversity", "Uniqueness", "MotifDist"]
+            self.metric_map[n] for n in self.metric_names if n in ["Diversity", "Uniqueness", "MotifDist", "InteractionDiversity"]
         ]
 
     
@@ -120,7 +216,7 @@ class Evaluator:
         for k, v in dataset_metrics.items():
             if k not in dataset_metric_data:
                 dataset_metric_data[k] = []
-            if k == "MotifDist":
+            if k in ("MotifDist", "InteractionDiversity") and isinstance(v, dict):
                 row = {"uniprot": uniprot, "series": series}
                 row.update(v)
                 dataset_metric_data[k].append(row)
@@ -134,11 +230,7 @@ class Evaluator:
             df = pd.DataFrame(rows)
             if metric_name == "InteractionScore":
                 df = df.fillna(False)
-            
-            if self.evaluateDocked:
-                out_path = os.path.join(save_dir, f"{metric_name}_docked.csv")
-            else:
-                out_path = os.path.join(save_dir, f"{metric_name}.csv")
+            out_path = os.path.join(save_dir, f"{metric_name}.csv")
             df.to_csv(out_path, index=False)
 
         # 4️⃣ 保存 dataset-level
@@ -154,10 +246,7 @@ class Evaluator:
         if not os.path.exists(results_dir):
             return False
         for metric_name in self.metric_names:
-            if self.evaluateDocked:
-                csv_path = os.path.join(results_dir, f"{metric_name}_docked.csv")
-            else:
-                csv_path = os.path.join(results_dir, f"{metric_name}.csv")
+            csv_path = os.path.join(results_dir, f"{metric_name}.csv")
             if not os.path.exists(csv_path):
                 return False
         return True
@@ -191,77 +280,118 @@ class Evaluator:
         mode: str,
         skip_existing: bool,
     ):
-        """Process a single uniprot entry."""
+        """Process a single uniprot entry.
+        
+        This method is designed to be called in parallel by joblib workers.
+        Each uniprot is processed independently, and any metric caches
+        are cleared after processing to free memory.
+        """
         uniprot_path = os.path.join(root_dir, uniprot, round, mode)
         prot_path = os.path.join(root_dir, uniprot, f"{uniprot}_prep.pdb")
         pocket_path = os.path.join(root_dir, uniprot, f"{uniprot}_pocket10.pdb")
         ref_active_path = os.path.join(root_dir, uniprot, "reference_active_molecules", f"{uniprot}_reference_active_molecules.sdf")
+        
+        try:
+            if mode == "De_novo_Results":
+                self._process_denovo(
+                    uniprot, uniprot_path, prot_path, pocket_path, 
+                    ref_active_path, model_name, skip_existing, mode
+                )
 
-        if mode == "De_novo_Results":
-            if not self.evaluateDocked:
-                sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
-            else:
-                sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}_vina_docked.sdf")
-            
+            elif mode == "Hit_to_Lead_Results":
+                self._process_hit2lead(
+                    uniprot, uniprot_path, prot_path, pocket_path,
+                    ref_active_path, model_name, skip_existing, mode
+                )
+        finally:
+            # Clear InteractionScoreMetric cache after processing each uniprot
+            # to prevent memory buildup in long-running parallel jobs
+            InteractionScoreMetric.clear_cache()
+    
+    def _process_denovo(
+        self,
+        uniprot: str,
+        uniprot_path: str,
+        prot_path: str,
+        pocket_path: str,
+        ref_active_path: str,
+        model_name: str,
+        skip_existing: bool,
+        mode: str,
+    ):
+        """Process a single uniprot entry for de novo mode."""
+        sdf_path = os.path.join(uniprot_path, model_name, f"{uniprot}_{model_name}.sdf")
+        if not os.path.exists(sdf_path):
+            return
+        
+        results_dir = os.path.join(uniprot_path, model_name, "results")
+        if skip_existing and self._check_metrics_exist(results_dir):
+            return
+        
+        docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
+        records = read_sdf_to_records(
+            uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path
+        )
+        records = attach_docked_molecules(records, docked_path)
+        
+        records = self.evaluate_molecule_metrics(records)
+        dataset_results = self.evaluate_dataset_metrics(records)
+        self._save_metrics_to_csv(
+            records, dataset_results, save_dir=results_dir,
+            uniprot=uniprot, series=None, model_name=model_name, mode=mode,
+        )
+    
+    def _process_hit2lead(
+        self,
+        uniprot: str,
+        uniprot_path: str,
+        prot_path: str,
+        pocket_path: str,
+        ref_active_path: str,
+        model_name: str,
+        skip_existing: bool,
+        mode: str,
+    ):
+        """Process a single uniprot entry for hit-to-lead mode."""
+        if not os.path.exists(uniprot_path):
+            return
+        for series_id in os.listdir(uniprot_path):
+            series_path = os.path.join(uniprot_path, series_id)
+            sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
             if not os.path.exists(sdf_path):
-                return
+                continue
             
-            results_dir = os.path.join(uniprot_path, model_name, "results")
+            results_dir = os.path.join(series_path, model_name, "results")
             if skip_existing and self._check_metrics_exist(results_dir):
-                return
+                continue
+
+            # try to read sdf files
+            try:
+                _  = Chem.SDMolSupplier(sdf_path)
+            except Exception:
+                _logger.warning(f"Error reading SDF file: {sdf_path}")
+                continue
             
+            docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
+            # series_ref_active_path = os.path.join(
+            #     os.path.dirname(ref_active_path), "Hit2Lead",
+            #     f"{uniprot}_{series_id}_reference_ligand_pose_with_h.sdf"
+            # )
+            # if not os.path.exists(series_ref_active_path):
+            
+            series_ref_active_path = ref_active_path
+                
             records = read_sdf_to_records(
-                uniprot, None, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_active_path, round=round
+                uniprot, series_id, sdf_path, prot_path, pocket_path, series_ref_active_path
             )
-            if not self.evaluateDocked:
-                docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                records = attach_docked_molecules(records, docked_path)
+            records = attach_docked_molecules(records, docked_path)
             
             records = self.evaluate_molecule_metrics(records)
             dataset_results = self.evaluate_dataset_metrics(records)
             self._save_metrics_to_csv(
                 records, dataset_results, save_dir=results_dir,
-                uniprot=uniprot, series=None, model_name=model_name, mode=mode,
+                uniprot=uniprot, series=series_id, model_name=model_name, mode=mode,
             )
-
-        elif mode == "Hit_to_Lead_Results":
-            if not os.path.exists(uniprot_path):
-                return
-            for series_id in os.listdir(uniprot_path):
-                series_path = os.path.join(uniprot_path, series_id)
-                ref_motif_path = os.path.join(root_dir, uniprot, "reference_active_molecules", "Hit2Lead", f"{uniprot}_{series_id}_with_common_scaffold.sdf")
-                
-                if not self.evaluateDocked:
-                    sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}.sdf")
-                else:
-                    sdf_path = os.path.join(series_path, model_name, f"{uniprot}_{series_id}_{model_name}_vina_docked.sdf")
-                
-                if not os.path.exists(sdf_path):
-                    continue
-                
-                try:
-                    Chem.SDMolSupplier(str(sdf_path))
-                except:
-                    # print(f"Empty SDF file: {sdf_path}")
-                    continue
-                
-                results_dir = os.path.join(series_path, model_name, "results")
-                if skip_existing and self._check_metrics_exist(results_dir):
-                    continue
-                
-                records = read_sdf_to_records(
-                    uniprot, series_id, sdf_path, prot_path, pocket_path, ref_active_path, ref_motif_path=ref_motif_path, round=round
-                )
-                if not self.evaluateDocked:
-                    docked_path = sdf_path.replace(".sdf", "_vina_docked.sdf")
-                    records = attach_docked_molecules(records, docked_path)
-                
-                records = self.evaluate_molecule_metrics(records)
-                dataset_results = self.evaluate_dataset_metrics(records)
-                self._save_metrics_to_csv(
-                    records, dataset_results, save_dir=results_dir,
-                    uniprot=uniprot, series=series_id, model_name=model_name, mode=mode,
-                )
 
     # ---------------------------- #
     #   顶层 pipeline
@@ -286,14 +416,14 @@ class Evaluator:
             pd.DataFrame of aggregated results
         """
         
-        uniprot_list = os.listdir(root_dir)
+        uniprot_list = [u for u in os.listdir(root_dir) if u.startswith(('O', 'P', 'Q'))]
         
         if n_jobs != 1:
-            Parallel(n_jobs=n_jobs)(
+            ParallelTqdm(n_jobs=n_jobs, total_tasks=len(uniprot_list))(
                 delayed(self._process_uniprot)(
                     uniprot, root_dir, model_name, round, mode, skip_existing
                 )
-                for uniprot in tqdm(uniprot_list)
+                for uniprot in uniprot_list
             )
         else:
             for uniprot in tqdm(uniprot_list):

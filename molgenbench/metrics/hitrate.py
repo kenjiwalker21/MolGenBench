@@ -57,7 +57,7 @@ class HitRediscoverMetric(Metric):
         Chem.AssignStereochemistryFrom3D(mol)
         return mol
     
-    def _load_reference_maps(self, ref_active_path: str, series: str = None, round: str = None):
+    def _load_reference_maps(self, ref_active_path: str, series: str = None):
         """
         Unified method to load reference maps with caching.
         If series is not None, use h2l logic; otherwise use denovo logic.
@@ -70,9 +70,7 @@ class HitRediscoverMetric(Metric):
             return self._cached_ref_inchi_map_ref_smiles, self._cached_ref_inchi_map_ref_scaffold
         
         # load reference maps
-        if round == "Scaling":
-            ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps_scaling(ref_active_path)
-        elif series is not None:
+        if series is not None:
             ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps_h2l(ref_active_path, series)
         else:
             ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps_denovo(ref_active_path)
@@ -214,77 +212,6 @@ class HitRediscoverMetric(Metric):
             ref_inchi_map_ref_scaffold = pickle.load(f)
     
         return ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold
-    
-    def _load_reference_maps_scaling(self, ref_active_path: str): 
-        # scaling round use the same active pool to denovo, for both h2l and denovo mode.
-        cache_smiles_path = ref_active_path.replace('_reference_active_molecules.sdf', '_smiles.pkl')
-        cache_scaffold_path = ref_active_path.replace('_reference_active_molecules.sdf', '_scaffold.pkl')
-        cached_inchi_map_smiles_path = ref_active_path.replace('_reference_active_molecules.sdf', '_inchi_map_smiles.pkl')
-        cached_inchi_map_scaffold_path = ref_active_path.replace('_reference_active_molecules.sdf', '_inchi_map_scaffold.pkl')
-
-        # load or create cached reference smiles map
-        if not os.path.exists(cached_inchi_map_smiles_path):
-            ref_smiles_set = set()
-            ref_inchi_map_ref_smiles = {}
-            suppl = Chem.SDMolSupplier(ref_active_path)
-            for ref_mol in suppl:
-                if ref_mol is None:
-                    continue
-                frags = Chem.GetMolFrags(ref_mol, asMols=True)
-                ref_mol = max(frags, key=lambda x: x.GetNumAtoms())
-                ref_smiles_set.add(Chem.MolToSmiles(ref_mol))
-                
-            for ref_smiles in ref_smiles_set:
-                ref_inchi_set = self._enumerate_tautomer_and_partial_chirality(ref_smiles)
-                # multi inchi map to one smiles
-                ref_inchi_map_ref_smiles.update({key: ref_smiles for key in ref_inchi_set})
-                
-            with open(cached_inchi_map_smiles_path, 'wb') as f:
-                pickle.dump(ref_inchi_map_ref_smiles, f)
-                
-            if not os.path.exists(cache_smiles_path):
-                with open(cache_smiles_path, 'wb') as f:
-                    pickle.dump(ref_smiles_set, f)
-                    
-        with open(cached_inchi_map_smiles_path, 'rb') as f:
-            ref_inchi_map_ref_smiles = pickle.load(f)
-            
-        # load or create cached reference scaffold map
-        if not os.path.exists(cached_inchi_map_scaffold_path):
-            ref_smiles_set = set()
-            ref_scaffold_set = set()
-            ref_inchi_map_ref_scaffold = {}
-            ref_scaffold_map_smiles = defaultdict(set)
-            suppl = Chem.SDMolSupplier(ref_active_path)
-            for ref_mol in suppl:
-                if ref_mol is None:
-                    continue
-                frags = Chem.GetMolFrags(ref_mol, asMols=True)
-                ref_mol = max(frags, key=lambda x: x.GetNumAtoms())
-                ref_smiles_set.add(Chem.MolToSmiles(ref_mol))
-            
-            for ref_smiles in ref_smiles_set:
-                scaffold_smiles = self._getScaffold(ref_smiles)
-                if scaffold_smiles != '':
-                    ref_scaffold_set.add(scaffold_smiles)
-                    ref_scaffold_map_smiles[scaffold_smiles].add(ref_smiles)
-            
-            for ref_scaffold in ref_scaffold_set:
-                ref_inchi_set = self._enumerate_tautomer_and_partial_chirality(ref_scaffold)
-                # multi inchi map to one smiles
-                ref_inchi_map_ref_scaffold.update({key: ref_scaffold for key in ref_inchi_set})
-                
-            with open(cached_inchi_map_scaffold_path, 'wb') as f:
-                pickle.dump(ref_inchi_map_ref_scaffold, f)
-            
-            if not os.path.exists(cache_scaffold_path):
-                with open(cache_scaffold_path, 'wb') as f:
-                    pickle.dump(ref_scaffold_map_smiles, f)
-        
-        with open(cached_inchi_map_scaffold_path, 'rb') as f:
-            ref_inchi_map_ref_scaffold = pickle.load(f)
-    
-        return ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold
 
     def _check_smiles_inchi_in_trainset(self, uniprot: str, smiles_inchi: str):
         if uniprot not in crossdock_trainset_duplicated_inchi_map_smiles:
@@ -325,12 +252,20 @@ class HitRediscoverMetric(Metric):
         if self.fixStereoFrom3D:
             gen_mol = self._fix_stereo_from_3D(gen_mol)
         
-        gen_smiles = Chem.MolToSmiles(gen_mol)
-        gen_smiles_inchi = Chem.MolToInchi(gen_mol)
+        try:
+            gen_smiles = Chem.MolToSmiles(gen_mol)
+        except Exception:
+            gen_smiles = None
+        try:
+            gen_smiles_inchi = Chem.MolToInchi(gen_mol)
+        except Exception:
+            gen_smiles_inchi = None
         
         gen_scaffold = self._getScaffold(gen_smiles)
-        gen_scaffold_mol = Chem.MolFromSmiles(gen_scaffold) if gen_scaffold != '' else None
-        gen_scaffold_inchi = Chem.MolToInchi(gen_scaffold_mol) if gen_scaffold_mol != None else None
+        try:
+            gen_scaffold_inchi = Chem.MolToInchi(Chem.MolFromSmiles(gen_scaffold)) if gen_scaffold != '' else None
+        except Exception:
+            gen_scaffold_inchi = None
 
         result["gen_smiles"] = gen_smiles
         result["gen_scaffold"] = gen_scaffold if gen_scaffold != '' else None
@@ -338,8 +273,7 @@ class HitRediscoverMetric(Metric):
         ref_active_path = record.metadata.get("ref_active_path", None)
         # check if denovo mode or h2l mode
         series = record.series
-        round = record.round
-        ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps(ref_active_path, series, round)
+        ref_inchi_map_ref_smiles, ref_inchi_map_ref_scaffold = self._load_reference_maps(ref_active_path, series)
         
         if gen_smiles_inchi is not None and gen_smiles_inchi in ref_inchi_map_ref_smiles:
             result["smiles_hit"] = True

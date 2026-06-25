@@ -10,15 +10,48 @@ import multiprocessing as mp
 import AutoDockTools
 from joblib import Parallel, delayed
 from rdkit import Chem
-from rdkit.Chem import Lipinski
 from vina import Vina
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
 from openbabel import pybel
 from meeko import MoleculePreparation
 from meeko import obutils
+# from meeko import RDKitMolCreate
+# from meeko import PDBQTMolecule
 
 from molgenbench.metrics.basic import is_valid
+
+TMPDIR = os.environ.get('TMPDIR', './tmp')
+
+################################################################################
+# MolGenBench asked for meeko v0.1.dev3 for the obutils package.
+# Updated to meeko v0.7 for the RDKitMolCreate module.
+# Copied obutils.writeMolecule from meeko v0.1.dev3 to this file.
+
+def _getNameExt(fname):
+    """ extract name and extension from the input file, removing the dot
+        filename.ext -> [filename, ext]
+    """
+    name, ext = os.path.splitext(fname)
+    return name, ext[1:] #.lower()
+
+
+def _writeMolecule(mol, fname=None, ftype=None):
+    """ save a molecule with openbabel"""
+    if ftype is None:
+        n, ftype = _getNameExt(fname)
+        ftype = ftype.lower()
+
+    conv = ob.OBConversion()
+    conv.SetOutFormat(ftype)
+
+    if fname is not None:
+        conv.WriteFile(mol, fname)
+    else:
+        return conv.WriteString(mol)
+
+################################################################################
+
 
 
 def suppress_stdout(func):
@@ -39,7 +72,7 @@ def get_pdbqt_mol(pdbqt_block: str) -> Chem.Mol:
     # write pdbqt file
     random_name = get_random_id()
     # random_name = np.random.randint(0, 100000)
-    pdbqt_name = f"tmp/test_pdbqt_{random_name}.pdbqt"
+    pdbqt_name = f"{TMPDIR}/test_pdbqt_{random_name}.pdbqt"
     with open(pdbqt_name, "w") as f:
         f.write(pdbqt_block)
 
@@ -115,14 +148,14 @@ class PrepLig(object):
         
     def addH(self, polaronly=False, correctforph=True, PH=7): 
         self.ob_mol.OBMol.AddHydrogens(polaronly, correctforph, PH)
-        obutils.writeMolecule(self.ob_mol.OBMol, 'tmp_h.sdf')
+        _writeMolecule(self.ob_mol.OBMol, 'tmp_h.sdf')
 
     def gen_conf(self):
         sdf_block = self.ob_mol.write('sdf')
         rdkit_mol = Chem.MolFromMolBlock(sdf_block, removeHs=False)
         AllChem.EmbedMolecule(rdkit_mol, Chem.rdDistGeom.ETKDGv3())
         self.ob_mol = pybel.readstring('sdf', Chem.MolToMolBlock(rdkit_mol))
-        obutils.writeMolecule(self.ob_mol.OBMol, 'conf_h.sdf')
+        _writeMolecule(self.ob_mol.OBMol, 'conf_h.sdf')
 
     @suppress_stdout
     def get_pdbqt(self, lig_pdbqt=None):
@@ -290,7 +323,7 @@ class VinaDockingTask(BaseDockingTask):
 
         return cls(protein_root, ligand_rdmol, **kwargs)
 
-    def __init__(self, protein_path, ligand_rdmol, tmp_dir='./tmp', center=None,
+    def __init__(self, protein_path, ligand_rdmol, tmp_dir=TMPDIR, center=None,
                  size_factor=1., buffer=5.0, pos=None):
         super().__init__(protein_path, ligand_rdmol)
         # self.conda_env = conda_env
@@ -362,6 +395,8 @@ class VinaDockingTask(BaseDockingTask):
 def ligprep_simple(mol: Chem.Mol) -> Chem.Mol:
     if not is_valid(mol):
         return None
+    if mol.GetNumConformers() > 0:
+        return mol
     try:
         mol = Chem.AddHs(mol, addCoords=True)
         AllChem.EmbedMolecule(mol)
@@ -403,7 +438,6 @@ def process_ligand(ligand_file, ligand_root, protein_path, ref_ligand_mol, docke
         'protein_path': protein_path,
         'ligand_path': os.path.join(ligand_root, ligand_file),
         'ligand_mol': ligprep_simple(ligand_mol),
-        'num_rotatable_bonds': Lipinski.NumRotatableBonds(ligand_mol),
         'ref_ligand_mol': ref_ligand_mol,
         'docked_root': docked_root,
         'affinity': None,  # Placeholder for vina_dock results
@@ -422,7 +456,6 @@ def prepare_output_df(protein_path, ligand_root, ref_ligand_mol, docked_root):
     )
     
     output_df = pd.DataFrame(rows)
-    output_df = output_df[output_df['num_rotatable_bonds'] < 15]
     return output_df
 
 
@@ -432,9 +465,11 @@ def process_row(row):
         affinity = Chem.SDMolSupplier(docked_path)[0].GetProp('vina_dock')
         return row.name, affinity, docked_path
     try:
-        affinity, docked_pose = get_vina_results(row['ligand_mol'], row['protein_path'], row['ref_ligand_mol'])
-        if docked_pose is not None:
-            docked_mol = get_pdbqt_mol(docked_pose)
+        affinity, docked_pose_pdbqt_str = get_vina_results(row['ligand_mol'], row['protein_path'], row['ref_ligand_mol'])
+        if docked_pose_pdbqt_str is not None:
+            # docked_pdbqt_mols = PDBQTMolecule(docked_pose_pdbqt_str, is_dlg=False, skip_typing=False)
+            # docked_mol = RDKitMolCreate.from_pdbqt_mol(docked_pdbqt_mols)[0]
+            docked_mol = get_pdbqt_mol(docked_pose_pdbqt_str)
             docked_mol.SetProp('_Name', row['lig_name'])
             docked_mol.SetProp('vina_dock', str(affinity))
 

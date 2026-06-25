@@ -113,7 +113,7 @@ def main(argv=None):
     reference_dir = args.reference_dir
     uniprot_ids = args.uniprot_ids
     if uniprot_ids is None:
-        uniprot_ids = [d for d in os.listdir(reference_dir) if os.path.isdir(os.path.join(reference_dir, d))]
+        uniprot_ids = [d for d in os.listdir(reference_dir) if d.startswith(('O', 'P', 'Q')) and os.path.isdir(os.path.join(reference_dir, d))]
     print(f'Processing Num Protein: {len(uniprot_ids)}')
 
     Parallel(n_jobs=args.n_jobs)(
