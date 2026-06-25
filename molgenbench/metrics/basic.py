@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from copy import deepcopy
 from typing import Optional
@@ -148,7 +149,12 @@ class ReferenceSimilarityMetric(Metric):
             record.metadata[self.name] = None
             return None
 
-        supplier = Chem.SDMolSupplier(str(ref_active_path), removeHs=True)
+        series_ref_active_path = os.path.join(
+            os.path.dirname(ref_active_path), "Hit2Lead",
+            f"{record.uniprot}_{record.series}_reference_ligand_pose_with_h.sdf"
+        )
+
+        supplier = Chem.SDMolSupplier(str(series_ref_active_path), removeHs=True)
         ref_mol = next((m for m in supplier if m is not None), None)
         if ref_mol is None or not is_valid(ref_mol):
             record.metadata[self.name] = None
